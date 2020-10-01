@@ -28,7 +28,7 @@ Mirai WebSocket API (console) plugin
 1. 将`mirai-websocket-api`生成的`jar包文件`放入`plugins`文件夹中
 2. 编辑`config/MiraiWSApi/setting.yml`配置文件 (没有则自行创建)
 3. 再次启动[Mirai-console](https://github.com/mamoe/mirai-console)相关客户端
-4. 记录日志中出现的`authKey`
+4. 记录日志中出现的 `user` 和 `passwd`
 
 
 #### setting.yml模板
