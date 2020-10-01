@@ -14,7 +14,7 @@ import net.mamoe.mirai.console.util.ConsoleExperimentalApi
 @OptIn(ConsoleExperimentalApi::class)
 object MiraiWebsocketApiSettings : AbstractPluginData(), PluginConfig {
     override val saveName: String
-        get() = "config.yml"
+        get() = "config"
     val host by value("0.0.0.0")
     val port by value(7247)
     val user by value("root")

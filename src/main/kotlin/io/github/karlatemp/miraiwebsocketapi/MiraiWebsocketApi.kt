@@ -45,7 +45,7 @@ object MiraiWebsocketApi : KotlinPlugin(
         version = "1.0.0"
     )
         .author("Karlatemp")
-        .name("Mirai WS Api")
+        .name("MiraiWSApi")
         .build()
 ) {
     @OptIn(KtorExperimentalAPI::class)
