@@ -1,0 +1,9 @@
+.gradle
+.idea
+build/
+
+# Mirai console
+/config
+/logs
+/plugins
+/device.json
