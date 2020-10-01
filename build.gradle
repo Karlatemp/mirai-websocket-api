@@ -1,3 +1,11 @@
+/*
+ * Copyright (c) 2018-2020 Karlatemp. All rights reserved.
+ * @author Karlatemp <karlatemp@vip.qq.com> <https://github.com/Karlatemp>
+ * @create 2020/10/01 15:01:38
+ *
+ * mirai-websocket-api/build.gradle
+ */
+
 plugins {
     id 'org.jetbrains.kotlin.jvm' version '1.4.10'
     id 'org.jetbrains.kotlin.plugin.serialization' version '1.4.10'
@@ -14,11 +22,11 @@ repositories {
     mavenCentral()
 }
 
-def kotlinx(id) {
+static kotlinx(id) {
     "org.jetbrains.kotlinx:kotlinx-$id:0.1.16"
 }
 
-def ktor(id) {
+static ktor(id) {
     return "io.ktor:ktor-$id:1.4.0"
 }
 
