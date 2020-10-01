@@ -51,6 +51,16 @@ dependencies {
     implementation(ktor("http"))
 }
 
+shadowJar {
+    dependencyFilter.exclude {
+        return [
+                'org.jetbrains.kotlin',
+                'org.jetbrains.kotlinx',
+                'org.slf4j'
+        ].contains(it.moduleGroup)
+    }
+}
+
 compileKotlin {
     kotlinOptions {
         jvmTarget = '1.8'
