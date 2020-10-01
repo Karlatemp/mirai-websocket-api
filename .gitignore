@@ -3,6 +3,7 @@
 build/
 
 # Mirai console
+/data
 /config
 /logs
 /plugins
