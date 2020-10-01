@@ -30,6 +30,8 @@ suspend fun main() {
     }
     val c = ConcurrentLinkedList<suspend (OutgoingAction) -> Unit>()
     client.webSocket("ws://localhost:7247/") {
+        outgoing.send(Frame.Text("root")) // user
+        outgoing.send(Frame.Text("ROOT")) // passwd
         for (frame in incoming) {
             if (frame is Frame.Text) {
                 val msg = json.decodeFromString(OutgoingAction.serializer(), frame.readText())
@@ -62,6 +64,13 @@ suspend fun main() {
                         cor.set(corx)
                     }
                 }
+
+                suspend fun sendAndReceive(msg: suspend (String) -> IncomingAction): OutgoingAction.ActionResult {
+                    val id = "Xw" + UUID.randomUUID() + "/" + System.currentTimeMillis()
+                    return got(pre = {
+                        post(msg(id))
+                    }) { it is OutgoingAction.ActionResult && it.metadata == id } as OutgoingAction.ActionResult
+                }
                 launch {
                     if (msg.isMessageEvent) {
                         val chain = msg.message!!
@@ -78,18 +87,27 @@ suspend fun main() {
                                     )
                                 )
                             }
-                            "rec" -> {
-                                val id = "Xw" + UUID.randomUUID() + "/" + System.currentTimeMillis()
-                                val wkk = got(pre = {
-                                    post(
-                                        IncomingAction.ReplyMessage(
-                                            msg.replyKey!!, listOf(
-                                                PlainModel("IVK")
-                                            ),
-                                            metadata = id
+                            "rev" -> {
+                                val mid = chain.firstInstance<MessageSourceModel>().id
+                                post(IncomingAction.Recall(mid))
+                                post(
+                                    IncomingAction.ReplyMessage(
+                                        msg.replyKey!!, listOf(
+                                            QuoteModel(mid),
+                                            PlainModel("REC TW")
                                         )
                                     )
-                                }) { it is OutgoingAction.ActionResult.Success && it.metadata == id } as OutgoingAction.ActionResult.Success
+                                )
+                            }
+                            "rec" -> {
+                                val wkk = sendAndReceive {
+                                    IncomingAction.ReplyMessage(
+                                        msg.replyKey!!, listOf(
+                                            PlainModel("IVK")
+                                        ),
+                                        metadata = it
+                                    )
+                                } as OutgoingAction.ActionResult.Success
                                 val idWX = wkk.extendData!!.jsonObject["receiptId"]!!.jsonPrimitive.content
                                 println(idWX)
                                 delay(5000)

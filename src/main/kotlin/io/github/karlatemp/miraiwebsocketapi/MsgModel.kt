@@ -39,7 +39,7 @@ val messageSourceCache = CacheBuilder.newBuilder()
 internal operator fun <T, V> Cache<T, V>.get(key: T): V? = getIfPresent(key)
 internal operator fun <T, V> Cache<T, V>.set(key: T, value: V) = put(key, value)
 
-private fun MessageSource.toModel(): MessageSourceModel {
+internal fun MessageSource.toModel(): MessageSourceModel {
     val id = "MS.T" + System.currentTimeMillis() + ".UID" + UUID.randomUUID()
     messageSourceCache[id] = this
     return MessageSourceModel(id)

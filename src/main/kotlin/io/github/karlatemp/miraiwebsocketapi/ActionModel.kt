@@ -50,6 +50,23 @@ sealed class IncomingAction {
         override val metadata: String? = null
     ) : IncomingAction()
 
+    @SerialName("MuteMember")
+    @Serializable
+    data class MuteMember(
+        val bot: Long,
+        val group: Long,
+        val member: Long,
+        val time: Int,
+        override val metadata: String? = null
+    ) : IncomingAction()
+
+    @SerialName("Recall")
+    @Serializable
+    data class Recall(
+        val messageSource: String,
+        override val metadata: String? = null
+    ) : IncomingAction()
+
 }
 
 @Serializable

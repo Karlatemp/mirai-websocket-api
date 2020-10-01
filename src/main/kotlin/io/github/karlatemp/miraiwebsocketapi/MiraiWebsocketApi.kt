@@ -33,6 +33,7 @@ import net.mamoe.mirai.event.subscribeAlways
 import net.mamoe.mirai.getFriendOrNull
 import net.mamoe.mirai.getGroupOrNull
 import net.mamoe.mirai.message.*
+import net.mamoe.mirai.message.data.recall
 import java.util.*
 import java.util.concurrent.TimeUnit
 
@@ -52,6 +53,8 @@ object MiraiWebsocketApi : KotlinPlugin(
         logger.info("Enabling MiraiWebsocketApi...")
         logger.info("Reloading configs...")
         MiraiWebsocketApiSettings.reload()
+        logger.info("User   = " + MiraiWebsocketApiSettings.user)
+        logger.info("Passwd = " + MiraiWebsocketApiSettings.passwd)
         val server = embeddedServer(CIO, environment = applicationEngineEnvironment {
             this.module(Application::web)
 
@@ -133,28 +136,53 @@ fun Application.web() {
     install(WebSockets)
     routing {
         webSocket("/") {
+            // region helpers
+            suspend fun <T> rep(serializer: SerializationStrategy<T>, value: T) =
+                outgoing.send(Frame.Text(json.encodeToString(serializer, value)))
+
+            suspend fun IncomingAction.repOk(ext: JsonElement?) =
+                rep(OutgoingAction.serializer(), OutgoingAction.ActionResult.Success(metadata, ext))
+
+            suspend fun IncomingAction.repOk() = repOk(null)
+
+            suspend fun IncomingAction.repErr(
+                error: String, full: String
+            ) = rep(
+                OutgoingAction.ActionResult.serializer(),
+                OutgoingAction.ActionResult.Failed(metadata, error, full)
+            )
+
+            suspend fun IncomingAction.repErr(error: String) = repErr(error, error)
+            // endregion
+            // region login
+            kotlin.runCatching {
+                val user = (incoming.receive() as Frame.Text).readText()
+                val passwd = (incoming.receive() as Frame.Text).readText()
+                // TODO: 多用户, 等pr
+                val success = (
+                        user == MiraiWebsocketApiSettings.user && passwd == MiraiWebsocketApiSettings.passwd
+                        )
+                if (success) {
+                    rep(
+                        OutgoingAction.ActionResult.serializer(),
+                        OutgoingAction.ActionResult.Success(null)
+                    )
+                } else {
+                    rep(
+                        OutgoingAction.ActionResult.serializer(),
+                        OutgoingAction.ActionResult.Failed(null, "Login failed", "Login failed")
+                    )
+                    return@webSocket
+                }
+            }
+            // endregion
+
             val hook = messageBus.insertLast { outgoing.send(Frame.Text(it)) }
             try {
-                suspend fun <T> rep(serializer: SerializationStrategy<T>, value: T) =
-                    outgoing.send(Frame.Text(json.encodeToString(serializer, value)))
-
-
-                suspend fun IncomingAction.repOk(ext: JsonElement?) =
-                    rep(OutgoingAction.serializer(), OutgoingAction.ActionResult.Success(metadata, ext))
-
-                suspend fun IncomingAction.repOk() = repOk(null)
-
-                suspend fun IncomingAction.repErr(
-                    error: String, full: String
-                ) = rep(
-                    OutgoingAction.ActionResult.serializer(),
-                    OutgoingAction.ActionResult.Failed(metadata, error, full)
-                )
-
-                suspend fun IncomingAction.repErr(error: String) = repErr(error, error)
 
                 fun MessageReceipt<*>.json() = buildJsonObject {
                     put("receiptId", saveReceiptCache(this@json))
+                    put("sourceId", this@json.source.toModel().id)
                 }
 
                 for (frame in incoming) {
@@ -172,13 +200,39 @@ fun Application.web() {
                                         action.repOk()
                                     }
                                 }
+                                is IncomingAction.Recall -> {
+                                    val messageSource = messageSourceCache[action.messageSource]
+                                    if (messageSource == null) {
+                                        action.repErr("Message source ${action.messageSource} not found.")
+                                    } else {
+                                        messageSource.recall()
+                                    }
+                                }
                                 is IncomingAction.ReplyMessage -> {
                                     val reply = replayCache[action.id]
                                     if (reply == null) {
                                         action.repErr("Reply id ${action.id} not found.")
                                     } else {
                                         action.repOk(reply.sendMessage(action.message.toChain(reply)).json())
-
+                                    }
+                                }
+                                is IncomingAction.MuteMember -> {
+                                    val bot = Bot.getInstanceOrNull(action.bot)
+                                    if (bot == null) {
+                                        action.repErr("Bot ${action.bot} not found.")
+                                    } else {
+                                        val group = bot.getGroupOrNull(action.group)
+                                        if (group == null) {
+                                            action.repErr("Group ${action.group} not found in bot ${action.bot}")
+                                        } else {
+                                            val member = group.getOrNull(action.member)
+                                            if (member == null) {
+                                                action.repErr("Member ${action.member} not found in group ${action.group} with bot ${action.bot}")
+                                            } else {
+                                                member.mute(action.time)
+                                                action.repOk()
+                                            }
+                                        }
                                     }
                                 }
                                 is IncomingAction.SendToGroup -> {
