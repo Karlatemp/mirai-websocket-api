@@ -103,7 +103,7 @@ suspend fun MessageChainModel.toChain(source: Contact? = null): MessageChain = b
             is ImageModel -> elm.upload(source)
             is FlashImageModel -> FlashImage(elm.image.upload(source))
             is MessageSourceModel -> return@forEach // dropped
-            is PokeModel -> pokeTypeMappings[elm.type] ?: error("No poke type found with " + elm.type)
+            is PokeModel -> pokeTypeMappings[elm.pokeType] ?: error("No poke type found with " + elm.pokeType)
             is VoiceModel -> error("Unsupported send voice.")
             is QuoteModel -> QuoteReply(elm.id.getSource())
             is ServiceModel -> ServiceMessage(elm.id, elm.content)
@@ -183,7 +183,7 @@ data class MessageSourceModel(
 @SerialName("Poke")
 data class PokeModel(
     val name: String? = null,
-    val type: Int
+    val pokeType: Int
 ) : MsgModel()
 
 @Serializable
