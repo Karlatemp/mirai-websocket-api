@@ -1,0 +1,153 @@
+message Actions{
+  message ToWSApiAction {
+    message Reply{
+      required string id = 1;
+      repeated MessageElement message = 2;
+    }
+    message SendToGroup {
+      required int64          group = 1;
+      required int64          bot = 2;
+      repeated MessageElement message = 3;
+      optional string         metadata = 4;
+    }
+    message SendToFriend {
+      required int64          friend = 1;
+      required int64          bot = 2;
+      repeated MessageElement message = 3;
+      optional string         metadata = 4;
+    }
+    message RecallReceipt {
+      required string receipt = 1;
+      optional string metadata = 2;
+    }
+    message MuteMember {
+      required int64 bot = 1;
+      required int64 group = 2;
+      required int64 member = 3;
+      required int32 time = 4;
+      optional string metadata = 5;
+    }
+    message Recall {
+      required string messageSource = 1;
+      optional string metadata = 2;
+    }
+  }
+  message FromWSApiAction {
+    required bool isMessageEvent = 50;
+
+    message ActionResult {
+      // only mark
+      // false forever
+      required bool isMessageEvent = 50 [default = false];
+
+      message ResultSuccess {
+        optional string metadata = 1;
+        // nullable
+        map<string, string> extendData = 2;
+      }
+      message ResultFailed {
+        optional string metadata = 1;
+        required string error = 2;
+        required string fullError = 3;
+      }
+    }
+
+    message Events {
+      // only mark
+      // true forever
+      required bool isMessageEvent = 50 [default = true];
+
+      message MessageEvent {
+        // The key for reply
+        required string replyKey = 53;
+
+        message GroupMessage {
+          required Group group = 1;
+          required Member sender = 2;
+          required string replyKey = 3;
+          required int64 bot = 4;
+        }
+        message TempMessage {
+          required Group group = 1;
+          required Member sender = 2;
+          required string replyKey = 3;
+          required int64 bot = 4;
+        }
+        message FriendMessage {
+          required Friend sender = 2;
+          required string replyKey = 3;
+          required int64 bot = 4;
+        }
+      }
+
+    }
+  }
+}
+message MessageElement {
+  message AtAll {
+    // No any field
+  }
+  message PlainText {
+    required string msg = 1;
+  }
+  message At {
+    required int64 target = 1;
+    optional string display = 2;
+  }
+  message Face {
+    required int32 id = 1;
+  }
+  message Image {
+    optional string id = 1;
+    optional string url = 2;
+  }
+  message FlashImage {
+    required Image image = 1;
+  }
+  message MessageSource {
+    required string id = 1;
+  }
+  message Poke {
+    optional string name = 1;
+    required int32 pokeType = 2;
+  }
+  message Voice {
+    optional string url = 1;
+    required string filename = 2;
+  }
+  message Quote {
+    // Message Source id
+    required string id = 1;
+  }
+  message Service {
+    required int32 id = 1;
+    required string content = 2;
+  }
+  message LightApp {
+    required string content = 1;
+  }
+}
+
+// contact
+message Friend {
+  required int64  id = 1;
+  required string nick = 2;
+}
+enum MemberPermission {
+  member = 0;
+  administrator = 1;
+  owner = 2;
+}
+message Member {
+  required int64            id = 1;
+  required string           nick = 2;
+  required string           nameCard = 3;
+  required string           nameCardOrNick = 4;
+  required MemberPermission permission = 5;
+  required string           specialTitle = 6;
+}
+message Group {
+  required int64            id = 1;
+  required string           name = 2;
+  required MemberPermission botPermission = 3;
+}
