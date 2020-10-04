@@ -57,3 +57,4 @@ passwd: 1234567890
 
 * **[API文档参考](docs/API.md)**
 * [示例使用](src/test/kotlin/ShitListing.kt)
+* [Proto](proto/proto.proto)
