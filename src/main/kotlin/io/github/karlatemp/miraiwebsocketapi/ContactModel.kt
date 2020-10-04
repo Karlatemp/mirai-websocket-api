@@ -6,8 +6,11 @@
  * mirai-websocket-api/ContactModel.kt
  */
 
+@file:OptIn(ExperimentalSerializationApi::class)
+
 package io.github.karlatemp.miraiwebsocketapi
 
+import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.Serializable
 import net.mamoe.mirai.contact.Friend
 import net.mamoe.mirai.contact.Group

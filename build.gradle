@@ -49,6 +49,7 @@ dependencies {
     api(ktor("websockets"))
     implementation(ktor("server-core"))
     implementation(ktor("http"))
+    implementation "org.jetbrains.kotlinx:kotlinx-serialization-protobuf:1.0.0-RC"
 }
 
 shadowJar {

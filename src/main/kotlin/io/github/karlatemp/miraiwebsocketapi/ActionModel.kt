@@ -10,7 +10,6 @@ package io.github.karlatemp.miraiwebsocketapi
 
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.JsonElement
 
 
 @Serializable
@@ -85,7 +84,7 @@ sealed class OutgoingAction(
         @SerialName("ResultSuccess")
         data class Success(
             override val metadata: String?,
-            val extendData: JsonElement? = null
+            val extendData: Map<String, String>? = null
         ) : ActionResult()
 
         @Serializable

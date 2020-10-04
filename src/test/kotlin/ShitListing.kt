@@ -108,7 +108,7 @@ suspend fun main() {
                                         metadata = it
                                     )
                                 } as OutgoingAction.ActionResult.Success
-                                val idWX = wkk.extendData!!.jsonObject["receiptId"]!!.jsonPrimitive.content
+                                val idWX = wkk.extendData!!.getValue("receiptId")
                                 println(idWX)
                                 delay(5000)
                                 post(IncomingAction.RecallReceipt(idWX))

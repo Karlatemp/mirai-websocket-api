@@ -18,9 +18,6 @@ import io.ktor.server.engine.*
 import io.ktor.util.*
 import io.ktor.websocket.*
 import kotlinx.serialization.SerializationStrategy
-import kotlinx.serialization.json.JsonElement
-import kotlinx.serialization.json.buildJsonObject
-import kotlinx.serialization.json.put
 import net.mamoe.mirai.Bot
 import net.mamoe.mirai.console.plugin.jvm.JvmPlugin
 import net.mamoe.mirai.console.plugin.jvm.JvmPluginDescriptionBuilder
@@ -36,6 +33,7 @@ import net.mamoe.mirai.message.*
 import net.mamoe.mirai.message.data.recall
 import java.util.*
 import java.util.concurrent.TimeUnit
+import kotlin.collections.HashMap
 
 
 @AutoService(JvmPlugin::class)
@@ -140,7 +138,7 @@ fun Application.web() {
             suspend fun <T> rep(serializer: SerializationStrategy<T>, value: T) =
                 outgoing.send(Frame.Text(json.encodeToString(serializer, value)))
 
-            suspend fun IncomingAction.repOk(ext: JsonElement?) =
+            suspend fun IncomingAction.repOk(ext: Map<String, String>?) =
                 rep(OutgoingAction.serializer(), OutgoingAction.ActionResult.Success(metadata, ext))
 
             suspend fun IncomingAction.repOk() = repOk(null)
@@ -180,7 +178,7 @@ fun Application.web() {
             val hook = messageBus.insertLast { outgoing.send(Frame.Text(it)) }
             try {
 
-                fun MessageReceipt<*>.json() = buildJsonObject {
+                fun MessageReceipt<*>.json() = HashMap<String, String>().apply {
                     put("receiptId", saveReceiptCache(this@json))
                     put("sourceId", this@json.source.toModel().id)
                 }
