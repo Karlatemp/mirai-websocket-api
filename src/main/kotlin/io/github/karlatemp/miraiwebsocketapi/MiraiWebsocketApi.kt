@@ -10,6 +10,8 @@ package io.github.karlatemp.miraiwebsocketapi
 
 import com.google.auto.service.AutoService
 import com.google.common.cache.CacheBuilder
+import io.github.karlatemp.miraiwebsocketapi.account.Account
+import io.github.karlatemp.miraiwebsocketapi.event.AccountTryLoginEvent
 import io.ktor.application.*
 import io.ktor.http.cio.websocket.*
 import io.ktor.routing.*
@@ -25,6 +27,7 @@ import net.mamoe.mirai.console.plugin.jvm.KotlinPlugin
 import net.mamoe.mirai.contact.Contact
 import net.mamoe.mirai.event.Event
 import net.mamoe.mirai.event.Listener
+import net.mamoe.mirai.event.broadcast
 import net.mamoe.mirai.event.events.MessageRecallEvent
 import net.mamoe.mirai.event.subscribeAlways
 import net.mamoe.mirai.getFriendOrNull
@@ -64,7 +67,7 @@ object MiraiWebsocketApi : KotlinPlugin(
         logger.info("Server running on ${MiraiWebsocketApiSettings.host}:${MiraiWebsocketApiSettings.port}")
         server.start(false)
         suspend fun OutgoingAction.post() {
-            messageBus.post(json.encodeToString(OutgoingAction.serializer(), this))
+            messageBus.post(this, json.encodeToString(OutgoingAction.serializer(), this))
         }
         subscribeAlways<Event>(priority = Listener.EventPriority.MONITOR) {
             when (this) {
@@ -103,7 +106,7 @@ object MiraiWebsocketApi : KotlinPlugin(
     }
 }
 
-val messageBus = ConcurrentLinkedList<suspend (String) -> Unit>()
+val messageBus = ConcurrentLinkedList<suspend (OutgoingAction, String) -> Unit>()
 
 val replayCache = CacheBuilder.newBuilder()
     .expireAfterWrite(1, TimeUnit.HOURS)
@@ -126,9 +129,18 @@ fun saveReceiptCache(receipt: MessageReceipt<*>): String {
 }
 
 
-suspend fun <T> ConcurrentLinkedList<suspend (T) -> Unit>.post(msg: T) {
-    forEach { kotlin.runCatching { it(msg) } }
+suspend fun <T1, T2> ConcurrentLinkedList<suspend (T1, T2) -> Unit>.post(m1: T1, m2: T2) {
+    forEach { kotlin.runCatching { it(m1, m2) } }
 }
+
+suspend fun selectUser(user: String, passwd: String): Account? {
+    // TODO: 多用户
+    if (user == MiraiWebsocketApiSettings.user && passwd == MiraiWebsocketApiSettings.passwd) {
+        return Account.Root()
+    }
+    return null
+}
+
 
 fun Application.web() {
     install(WebSockets)
@@ -138,44 +150,48 @@ fun Application.web() {
             suspend fun <T> rep(serializer: SerializationStrategy<T>, value: T) =
                 outgoing.send(Frame.Text(json.encodeToString(serializer, value)))
 
-            suspend fun IncomingAction.repOk(ext: Map<String, String>?) =
-                rep(OutgoingAction.serializer(), OutgoingAction.ActionResult.Success(metadata, ext))
+            suspend fun IncomingAction?.repOk(ext: Map<String, String>?) =
+                rep(OutgoingAction.serializer(), OutgoingAction.ActionResult.Success(this?.metadata, ext))
 
-            suspend fun IncomingAction.repOk() = repOk(null)
+            suspend fun IncomingAction?.repOk() = repOk(null)
 
-            suspend fun IncomingAction.repErr(
+            suspend fun IncomingAction?.repErr(
                 error: String, full: String
             ) = rep(
                 OutgoingAction.ActionResult.serializer(),
-                OutgoingAction.ActionResult.Failed(metadata, error, full)
+                OutgoingAction.ActionResult.Failed(this?.metadata, error, full)
             )
 
-            suspend fun IncomingAction.repErr(error: String) = repErr(error, error)
+            suspend fun IncomingAction?.repErr(error: String) = repErr(error, error)
+            suspend fun IncomingAction?.repErr(error: Throwable) = repErr(error.toString(), error.stackTraceToString())
             // endregion
             // region login
-            kotlin.runCatching {
+            val account = kotlin.runCatching {
                 val user = (incoming.receive() as Frame.Text).readText()
                 val passwd = (incoming.receive() as Frame.Text).readText()
-                // TODO: 多用户, 等pr
-                val success = (
-                        user == MiraiWebsocketApiSettings.user && passwd == MiraiWebsocketApiSettings.passwd
+                val selectedAccount = selectUser(user, passwd)
+                if (selectedAccount != null) {
+                    if (!AccountTryLoginEvent(selectedAccount, this).also { it.broadcast() }.isCancelled) {
+                        rep(
+                            OutgoingAction.ActionResult.serializer(),
+                            OutgoingAction.ActionResult.Success(null)
                         )
-                if (success) {
-                    rep(
-                        OutgoingAction.ActionResult.serializer(),
-                        OutgoingAction.ActionResult.Success(null)
-                    )
-                } else {
-                    rep(
-                        OutgoingAction.ActionResult.serializer(),
-                        OutgoingAction.ActionResult.Failed(null, "Login failed", "Login failed")
-                    )
-                    return@webSocket
+                        return@runCatching selectedAccount
+                    }
                 }
-            }
+                rep(
+                    OutgoingAction.ActionResult.serializer(),
+                    OutgoingAction.ActionResult.Failed(null, "Login failed", "Login failed")
+                )
+                return@webSocket
+            }.getOrNull() ?: return@webSocket
             // endregion
 
-            val hook = messageBus.insertLast { outgoing.send(Frame.Text(it)) }
+
+            val hook = messageBus.insertLast { action, message ->
+                if (account.shouldBroadcast(action))
+                    outgoing.send(Frame.Text(message))
+            }
             try {
 
                 fun MessageReceipt<*>.json() = HashMap<String, String>().apply {
@@ -185,9 +201,18 @@ fun Application.web() {
 
                 for (frame in incoming) {
                     if (frame is Frame.Text) {
-                        val action = json.decodeFromString(IncomingAction.serializer(), frame.readText())
+                        val action = kotlin.runCatching {
+                            json.decodeFromString(IncomingAction.serializer(), frame.readText())
+                        }.getOrElse { exception ->
+                            null.repErr(exception)
+                            return@webSocket
+                        }
 
                         try {
+                            if (!account.isAllowed(action)) {
+                                action.repErr("Error: This session don't have the permission to perform the action.")
+                                continue
+                            }
                             when (action) {
                                 is IncomingAction.RecallReceipt -> {
                                     val receipt = receiptCache[action.receipt]
@@ -261,7 +286,7 @@ fun Application.web() {
                                 }
                             }
                         } catch (e: Throwable) {
-                            action.repErr(e.toString(), e.stackTraceToString())
+                            action.repErr(e)
                         }
                     }
                 }
