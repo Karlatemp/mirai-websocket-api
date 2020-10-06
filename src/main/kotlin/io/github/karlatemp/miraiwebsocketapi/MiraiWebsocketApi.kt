@@ -9,6 +9,7 @@
 package io.github.karlatemp.miraiwebsocketapi
 
 import com.google.auto.service.AutoService
+import com.google.common.cache.Cache
 import com.google.common.cache.CacheBuilder
 import io.github.karlatemp.miraiwebsocketapi.account.Account
 import io.github.karlatemp.miraiwebsocketapi.event.AccountTryLoginEvent
@@ -38,12 +39,24 @@ import java.util.*
 import java.util.concurrent.TimeUnit
 import kotlin.collections.HashMap
 
+internal val metadata by lazy {
+    val properties = Properties()
+    MiraiWebsocketApi::class.java
+        .getResourceAsStream("/miraiwsapi.properties")
+        ?.let { stream ->
+            stream.reader().buffered().use { properties.load(it) }
+        }
+    properties
+}
+internal val version by lazy {
+    metadata.getProperty("version", "0.0.0-ERROR+ERROR-Metadata-NOT-FOUND")
+}
 
 @AutoService(JvmPlugin::class)
 object MiraiWebsocketApi : KotlinPlugin(
     JvmPluginDescriptionBuilder(
         id = "io.github.karlatemp.mirai.mirai-http-api",
-        version = "1.0.0"
+        version = version
     )
         .author("Karlatemp")
         .name("MiraiWSApi")
@@ -51,7 +64,7 @@ object MiraiWebsocketApi : KotlinPlugin(
 ) {
     @OptIn(KtorExperimentalAPI::class)
     override fun onEnable() {
-        logger.info("Enabling MiraiWebsocketApi...")
+        logger.info("Enabling MiraiWebsocketApi[$version]")
         logger.info("Reloading configs...")
         MiraiWebsocketApiSettings.reload()
         logger.info("User   = " + MiraiWebsocketApiSettings.user)
@@ -108,9 +121,9 @@ object MiraiWebsocketApi : KotlinPlugin(
 
 val messageBus = ConcurrentLinkedList<suspend (OutgoingAction, String) -> Unit>()
 
-val replayCache = CacheBuilder.newBuilder()
+val replayCache: Cache<String, Contact> = CacheBuilder.newBuilder()
     .expireAfterWrite(1, TimeUnit.HOURS)
-    .build<String, Contact>()
+    .build()
 
 fun saveReplyCache(contact: Contact): String {
     val id = "RP." + System.currentTimeMillis() + "/" + UUID.randomUUID()
@@ -118,9 +131,9 @@ fun saveReplyCache(contact: Contact): String {
     return id
 }
 
-val receiptCache = CacheBuilder.newBuilder()
+val receiptCache: Cache<String, MessageReceipt<*>> = CacheBuilder.newBuilder()
     .expireAfterWrite(1, TimeUnit.HOURS)
-    .build<String, MessageReceipt<*>>()
+    .build()
 
 fun saveReceiptCache(receipt: MessageReceipt<*>): String {
     val id = "REC." + System.currentTimeMillis() + "/" + UUID.randomUUID()

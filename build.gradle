@@ -14,7 +14,7 @@ plugins {
 }
 
 group 'io.github.karlatemp.mirai'
-version '1.0.0'
+version project.property("wsapi.version")
 
 repositories {
     mavenLocal()
@@ -74,5 +74,16 @@ compileTestKotlin {
         jvmTarget = '1.8'
         freeCompilerArgs += ['-Xopt-in=kotlin.RequiresOptIn',
                              '-Xjvm-default=enable']
+    }
+}
+
+processResources {
+    from(sourceSets.main.resources.srcDirs) {
+        expand([
+                'project': [
+                        'version': project.version
+                ]
+        ])
+        include 'miraiwsapi.properties'
     }
 }
