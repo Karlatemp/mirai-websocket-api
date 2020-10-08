@@ -35,6 +35,7 @@ import net.mamoe.mirai.getFriendOrNull
 import net.mamoe.mirai.getGroupOrNull
 import net.mamoe.mirai.message.*
 import net.mamoe.mirai.message.data.recall
+import org.slf4j.LoggerFactory
 import java.util.*
 import java.util.concurrent.TimeUnit
 import kotlin.collections.HashMap
@@ -70,6 +71,7 @@ object MiraiWebsocketApi : KotlinPlugin(
         logger.info("User   = " + MiraiWebsocketApiSettings.user)
         logger.info("Passwd = " + MiraiWebsocketApiSettings.passwd)
         val server = embeddedServer(CIO, environment = applicationEngineEnvironment {
+            log = LoggerFactory.getLogger("Mirai WebSocket API")
             this.module(Application::web)
 
             connector {
