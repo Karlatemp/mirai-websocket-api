@@ -30,7 +30,7 @@ import java.nio.file.Paths
 import java.util.*
 import java.util.concurrent.TimeUnit
 
-val json = Json { }
+val json = Json { encodeDefaults = false }
 
 val messageSourceCache = CacheBuilder.newBuilder()
     .expireAfterWrite(5, TimeUnit.HOURS)

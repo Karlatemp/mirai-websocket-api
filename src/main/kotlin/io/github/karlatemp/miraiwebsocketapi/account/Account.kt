@@ -8,8 +8,8 @@
 
 package io.github.karlatemp.miraiwebsocketapi.account
 
-import io.github.karlatemp.miraiwebsocketapi.IncomingAction
-import io.github.karlatemp.miraiwebsocketapi.OutgoingAction
+import io.github.karlatemp.miraiwebsocketapi.actions.IncomingAction
+import io.github.karlatemp.miraiwebsocketapi.actions.OutgoingAction
 import java.util.concurrent.ConcurrentHashMap
 
 open class Account internal constructor(

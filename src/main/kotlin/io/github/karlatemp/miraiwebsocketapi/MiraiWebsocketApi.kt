@@ -12,6 +12,7 @@ import com.google.auto.service.AutoService
 import com.google.common.cache.Cache
 import com.google.common.cache.CacheBuilder
 import io.github.karlatemp.miraiwebsocketapi.account.Account
+import io.github.karlatemp.miraiwebsocketapi.actions.*
 import io.github.karlatemp.miraiwebsocketapi.event.AccountTryLoginEvent
 import io.ktor.application.*
 import io.ktor.http.cio.websocket.*
@@ -21,6 +22,9 @@ import io.ktor.server.engine.*
 import io.ktor.util.*
 import io.ktor.websocket.*
 import kotlinx.serialization.SerializationStrategy
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 import net.mamoe.mirai.Bot
 import net.mamoe.mirai.console.plugin.jvm.JvmPlugin
 import net.mamoe.mirai.console.plugin.jvm.JvmPluginDescriptionBuilder
@@ -38,7 +42,6 @@ import net.mamoe.mirai.message.data.recall
 import org.slf4j.LoggerFactory
 import java.util.*
 import java.util.concurrent.TimeUnit
-import kotlin.collections.HashMap
 
 internal val metadata by lazy {
     val properties = Properties()
@@ -82,7 +85,7 @@ object MiraiWebsocketApi : KotlinPlugin(
         logger.info("Server running on ${MiraiWebsocketApiSettings.host}:${MiraiWebsocketApiSettings.port}")
         server.start(false)
         suspend fun OutgoingAction.post() {
-            messageBus.post(this, json.encodeToString(OutgoingAction.serializer(), this))
+            messageBus.post(this, json.encodeToString(OutgoingSerializer, this))
         }
         subscribeAlways<Event>(priority = Listener.EventPriority.MONITOR) {
             when (this) {
@@ -165,20 +168,20 @@ fun Application.web() {
             suspend fun <T> rep(serializer: SerializationStrategy<T>, value: T) =
                 outgoing.send(Frame.Text(json.encodeToString(serializer, value)))
 
-            suspend fun IncomingAction?.repOk(ext: Map<String, String>?) =
-                rep(OutgoingAction.serializer(), OutgoingAction.ActionResult.Success(this?.metadata, ext))
+            suspend fun Request?.repOk(ext: JsonObject?) =
+                rep(OutgoingSerializer, ActionResult(this?.requestId, true, null, null, ext))
 
-            suspend fun IncomingAction?.repOk() = repOk(null)
+            suspend fun Request?.repOk() = repOk(null)
 
-            suspend fun IncomingAction?.repErr(
+            suspend fun Request?.repErr(
                 error: String, full: String
             ) = rep(
-                OutgoingAction.ActionResult.serializer(),
-                OutgoingAction.ActionResult.Failed(this?.metadata, error, full)
+                OutgoingSerializer,
+                ActionResult(this?.requestId, false, error, full, null)
             )
 
-            suspend fun IncomingAction?.repErr(error: String) = repErr(error, error)
-            suspend fun IncomingAction?.repErr(error: Throwable) = repErr(error.toString(), error.stackTraceToString())
+            suspend fun Request?.repErr(error: String) = repErr(error, error)
+            suspend fun Request?.repErr(error: Throwable) = repErr(error.toString(), error.stackTraceToString())
             // endregion
             // region login
             val account = kotlin.runCatching {
@@ -187,17 +190,11 @@ fun Application.web() {
                 val selectedAccount = selectUser(user, passwd)
                 if (selectedAccount != null) {
                     if (!AccountTryLoginEvent(selectedAccount, this).also { it.broadcast() }.isCancelled) {
-                        rep(
-                            OutgoingAction.ActionResult.serializer(),
-                            OutgoingAction.ActionResult.Success(null)
-                        )
+                        null.repOk()
                         return@runCatching selectedAccount
                     }
                 }
-                rep(
-                    OutgoingAction.ActionResult.serializer(),
-                    OutgoingAction.ActionResult.Failed(null, "Login failed", "Login failed")
-                )
+                null.repErr("Login failed.")
                 return@webSocket
             }.getOrNull() ?: return@webSocket
             // endregion
@@ -209,39 +206,40 @@ fun Application.web() {
             }
             try {
 
-                fun MessageReceipt<*>.json() = HashMap<String, String>().apply {
+                fun MessageReceipt<*>.json() = buildJsonObject {
                     put("receiptId", saveReceiptCache(this@json))
                     put("sourceId", this@json.source.toModel().id)
                 }
 
                 for (frame in incoming) {
                     if (frame is Frame.Text) {
-                        val action = kotlin.runCatching {
-                            json.decodeFromString(IncomingAction.serializer(), frame.readText())
+                        val request = kotlin.runCatching {
+                            json.decodeFromString(Request.RequestSerializer, frame.readText())
                         }.getOrElse { exception ->
                             null.repErr(exception)
                             return@webSocket
                         }
+                        val action = request.action
 
                         try {
                             if (!account.isAllowed(action)) {
-                                action.repErr("Error: This session don't have the permission to perform the action.")
+                                request.repErr("Error: This session don't have the permission to perform the action.")
                                 continue
                             }
                             when (action) {
                                 is IncomingAction.RecallReceipt -> {
                                     val receipt = receiptCache[action.receipt]
                                     if (receipt == null) {
-                                        action.repErr("Receipt ${action.receipt} not found.")
+                                        request.repErr("Receipt ${action.receipt} not found.")
                                     } else {
                                         receipt.recall()
-                                        action.repOk()
+                                        request.repOk()
                                     }
                                 }
                                 is IncomingAction.Recall -> {
                                     val messageSource = messageSourceCache[action.messageSource]
                                     if (messageSource == null) {
-                                        action.repErr("Message source ${action.messageSource} not found.")
+                                        request.repErr("Message source ${action.messageSource} not found.")
                                     } else {
                                         messageSource.recall()
                                     }
@@ -249,26 +247,26 @@ fun Application.web() {
                                 is IncomingAction.ReplyMessage -> {
                                     val reply = replayCache[action.id]
                                     if (reply == null) {
-                                        action.repErr("Reply id ${action.id} not found.")
+                                        request.repErr("Reply id ${action.id} not found.")
                                     } else {
-                                        action.repOk(reply.sendMessage(action.message.toChain(reply)).json())
+                                        request.repOk(reply.sendMessage(action.message.toChain(reply)).json())
                                     }
                                 }
                                 is IncomingAction.MuteMember -> {
                                     val bot = Bot.getInstanceOrNull(action.bot)
                                     if (bot == null) {
-                                        action.repErr("Bot ${action.bot} not found.")
+                                        request.repErr("Bot ${action.bot} not found.")
                                     } else {
                                         val group = bot.getGroupOrNull(action.group)
                                         if (group == null) {
-                                            action.repErr("Group ${action.group} not found in bot ${action.bot}")
+                                            request.repErr("Group ${action.group} not found in bot ${action.bot}")
                                         } else {
                                             val member = group.getOrNull(action.member)
                                             if (member == null) {
-                                                action.repErr("Member ${action.member} not found in group ${action.group} with bot ${action.bot}")
+                                                request.repErr("Member ${action.member} not found in group ${action.group} with bot ${action.bot}")
                                             } else {
                                                 member.mute(action.time)
-                                                action.repOk()
+                                                request.repOk()
                                             }
                                         }
                                     }
@@ -276,32 +274,32 @@ fun Application.web() {
                                 is IncomingAction.SendToGroup -> {
                                     val bot = Bot.getInstanceOrNull(action.bot)
                                     if (bot == null) {
-                                        action.repErr("Bot ${action.bot} not found.")
+                                        request.repErr("Bot ${action.bot} not found.")
                                     } else {
                                         val group = bot.getGroupOrNull(action.group)
                                         if (group == null) {
-                                            action.repErr("Group ${action.group} not found in bot ${action.bot}")
+                                            request.repErr("Group ${action.group} not found in bot ${action.bot}")
                                         } else {
-                                            action.repOk(group.sendMessage(action.message.toChain(group)).json())
+                                            request.repOk(group.sendMessage(action.message.toChain(group)).json())
                                         }
                                     }
                                 }
                                 is IncomingAction.SendToFriend -> {
                                     val bot = Bot.getInstanceOrNull(action.bot)
                                     if (bot == null) {
-                                        action.repErr("Bot ${action.bot} not found.")
+                                        request.repErr("Bot ${action.bot} not found.")
                                     } else {
                                         val friend = bot.getFriendOrNull(action.friend)
                                         if (friend == null) {
-                                            action.repErr("Friend ${action.friend} not found in bot ${action.bot}")
+                                            request.repErr("Friend ${action.friend} not found in bot ${action.bot}")
                                         } else {
-                                            action.repOk(friend.sendMessage(action.message.toChain(friend)).json())
+                                            request.repOk(friend.sendMessage(action.message.toChain(friend)).json())
                                         }
                                     }
                                 }
                             }
                         } catch (e: Throwable) {
-                            action.repErr(e)
+                            request.repErr(e)
                         }
                     }
                 }
