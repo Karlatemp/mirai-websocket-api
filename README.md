@@ -46,7 +46,20 @@ port: 7247
 user: root
 
 # 必须, 默认密码为 ROOT, 必须修改
-passwd: 1234567890  
+passwd: ROOT
+
+# 是否在广播信息时使用 pettyPrint
+pettyPrint: false
+
+replyCache:
+  maximumSize: 2000
+  expireTime: 2
+  expireTimeUnit: HOURS
+
+messageSourceCache:
+  maximumSize: 2000
+  expireTime: 2
+  expireTimeUnit: HOURS
 
 ```
 
