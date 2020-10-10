@@ -70,29 +70,27 @@ sealed class IncomingAction {
 data class ActionResult(
     val id: String?,
     val success: Boolean,
-    val simpleError: String?,
-    val fullError: String?,
+    val error: String?,
+    val errorDetail: String?,
     val content: JsonObject?
 ) {
     @Suppress("UNCHECKED_CAST")
     public object ActionResultSerializer : KSerializer<ActionResult> {
         object ActionResultDeclaredSerializer : SerializationStrategy<ActionResult> {
             override val descriptor: SerialDescriptor = buildClassSerialDescriptor("ActionResult#declared") {
-                element("success", Boolean.serializer().descriptor, isOptional = false)
-                element("simpleError", String.serializer().descriptor, isOptional = true)
-                element("fullError", String.serializer().descriptor, isOptional = true)
+                element("error", String.serializer().descriptor, isOptional = true)
+                element("errorDetail", String.serializer().descriptor, isOptional = true)
                 element("content", JsonObject.serializer().descriptor, isOptional = true)
             }
 
             @OptIn(ExperimentalSerializationApi::class)
             override fun serialize(encoder: Encoder, value: ActionResult) {
                 encoder.encodeStructure(descriptor) {
-                    encodeBooleanElement(descriptor, 0, value.success)
-                    encodeNullableString(descriptor, 1, value.simpleError)
-                    encodeNullableString(descriptor, 2, value.fullError)
+                    encodeNullableString(descriptor, 0, value.error)
+                    encodeNullableString(descriptor, 1, value.errorDetail)
                     val content = value.content
-                    if (content != null || shouldEncodeElementDefault(descriptor, 3)) {
-                        encodeNullableSerializableElement(descriptor, 3, JsonObject.serializer(), content)
+                    if (content != null || shouldEncodeElementDefault(descriptor, 2)) {
+                        encodeNullableSerializableElement(descriptor, 2, JsonObject.serializer(), content)
                     }
                 }
             }
@@ -103,6 +101,7 @@ data class ActionResult(
             "ActionResult"
         ) {
             element("id", String.serializer().descriptor, isOptional = false)
+            element("success", Boolean.serializer().descriptor, isOptional = false)
             element("result", ActionResultDeclaredSerializer.descriptor, isOptional = false)
         }
 
@@ -110,9 +109,10 @@ data class ActionResult(
         fun serialize(encoder: CompositeEncoder, value: ActionResult) {
             encoder.run {
                 encodeNullableString(descriptor, 0, value.id)
+                encodeBooleanElement(descriptor, 1, value.success)
                 encodeSerializableElement(
                     descriptor,
-                    1,
+                    2,
                     ActionResultDeclaredSerializer,
                     value
                 )
@@ -128,26 +128,40 @@ data class ActionResult(
         fun deserialize(decoder: CompositeDecoder): ActionResult = decoder.run {
             var id: String? = null
             var result: ActionResult? = null
+            var success: Boolean? = null
             lp1@ while (true) {
                 when (val index = decodeElementIndex(descriptor)) {
                     -1 -> break@lp1
-                    0 -> {
-                        id = decodeNullableString(descriptor, 0, id)
+                    1 -> {
+                        success = decodeBooleanElement(descriptor, 1)
                         if (result != null) {
-                            val or = result!!
+                            val or = result
                             result = ActionResult(
-                                id = id,
-                                success = or.success,
-                                fullError = or.fullError,
-                                simpleError = or.simpleError,
+                                id = or.id,
+                                success = success,
+                                errorDetail = or.errorDetail,
+                                error = or.error,
                                 content = or.content
                             )
                         }
                     }
-                    1 -> {
+                    0 -> {
+                        id = decodeNullableString(descriptor, 0, id)
+                        if (result != null) {
+                            val or = result
+                            result = ActionResult(
+                                id = id,
+                                success = or.success,
+                                errorDetail = or.errorDetail,
+                                error = or.error,
+                                content = or.content
+                            )
+                        }
+                    }
+                    2 -> {
                         result = decodeSerializableElement(
                             descriptor,
-                            1,
+                            2,
                             object : DeserializationStrategy<ActionResult> {
                                 override val descriptor: SerialDescriptor
                                     get() = ActionResultDeclaredSerializer.descriptor
@@ -157,7 +171,6 @@ data class ActionResult(
                                 }
 
                                 override fun deserialize(decoder: Decoder): ActionResult {
-                                    var success: Boolean? = null
                                     var simpleError: String? = null
                                     var fullError: String? = null
                                     var content: JsonObject? = null
@@ -165,11 +178,10 @@ data class ActionResult(
                                         rrp@ while (true) {
                                             when (val index2 = decodeElementIndex(descriptor)) {
                                                 -1 -> break@rrp
-                                                0 -> success = decodeBooleanElement(descriptor, index2)
-                                                1 -> simpleError =
+                                                0 -> simpleError =
                                                     decodeNullableString(descriptor, index2, simpleError)
-                                                2 -> fullError = decodeNullableString(descriptor, index2, fullError)
-                                                3 -> content = decodeNullableSerializableElement(
+                                                1 -> fullError = decodeNullableString(descriptor, index2, fullError)
+                                                2 -> content = decodeNullableSerializableElement(
                                                     descriptor,
                                                     index2,
                                                     JsonObject.serializer() as KSerializer<JsonObject?>,
@@ -183,7 +195,7 @@ data class ActionResult(
                                     }
                                     return ActionResult(
                                         id,
-                                        requireNotNull(success) { "Result damage" },
+                                        success ?: false,
                                         simpleError,
                                         fullError,
                                         content
@@ -196,7 +208,8 @@ data class ActionResult(
                     }
                 }
             }
-            checkNotNull(result) { "Cannot deserialize ActionResult." }
+            check(result != null && success != null) { "Cannot deserialize ActionResult." }
+            result
         }
 
         @OptIn(ExperimentalSerializationApi::class)

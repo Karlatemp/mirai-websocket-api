@@ -8,6 +8,7 @@
 
 package io.github.karlatemp.miraiwebsocketapi
 
+import kotlinx.serialization.Serializable
 import net.mamoe.mirai.console.data.*
 import net.mamoe.mirai.console.util.ConsoleExperimentalApi
 
@@ -21,6 +22,14 @@ object MiraiWebsocketApiSettings : AbstractPluginData(), PluginConfig {
     val passwd by value(
         "ROOT"
         //"INITKEY" + UUID.randomUUID().toString().replace("-", "")
+    )
+    val cache by value(CacheSetting())
+
+    @Serializable
+    data class CacheSetting(
+        val maximumSize: Long = 2000L,
+        val expireTime: Long = 2,
+        val expireTimeUnit: String = "HOUR"
     )
 
     override fun onInit(owner: PluginDataHolder, storage: PluginDataStorage) {

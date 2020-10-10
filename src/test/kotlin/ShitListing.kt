@@ -89,7 +89,7 @@ suspend fun main() {
                         if (msg.isMessageEvent) {
                             val chain = msg.message!!
                             val rwmsg = chain.joinToString("") {
-                                if (it is PlainModel) it.msg else ""
+                                if (it is PlainModel) it.text else ""
                             }
                             when (rwmsg) {
                                 "image" -> {

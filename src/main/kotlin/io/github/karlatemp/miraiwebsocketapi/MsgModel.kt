@@ -32,9 +32,23 @@ import java.util.concurrent.TimeUnit
 
 val json = Json { encodeDefaults = false }
 
-val messageSourceCache = CacheBuilder.newBuilder()
-    .expireAfterWrite(5, TimeUnit.HOURS)
-    .build<String, MessageSource>()
+val messageSourceCache by lazy {
+    val setting = MiraiWebsocketApiSettings.cache
+    CacheBuilder.newBuilder()
+        .let { builder ->
+            if (setting.expireTime == 0L)
+                builder
+            else
+                builder.expireAfterWrite(setting.expireTime, TimeUnit.valueOf(setting.expireTimeUnit))
+        }
+        .let { builder ->
+            if (setting.maximumSize == 0L)
+                builder
+            else
+                builder.maximumSize(2000)
+        }
+        .build<String, MessageSource>()
+}
 
 internal operator fun <T, V> Cache<T, V>.get(key: T): V? = getIfPresent(key)
 internal operator fun <T, V> Cache<T, V>.set(key: T, value: V) = put(key, value)
@@ -87,7 +101,7 @@ suspend fun MessageChainModel.toChain(source: Contact? = null): MessageChain = b
     this@toChain.forEach { elm ->
         val m: SingleMessage = when (elm) {
             AtAllModel -> AtAll
-            is PlainModel -> PlainText(elm.msg)
+            is PlainModel -> PlainText(elm.text)
             is AtModel -> {
                 val group = source as? Group
                 if (group == null) {
@@ -151,8 +165,8 @@ sealed class MsgModel
 object AtAllModel : MsgModel()
 
 @Serializable
-@SerialName("PlainText")
-data class PlainModel(val msg: String) : MsgModel()
+@SerialName("Plain")
+data class PlainModel(val text: String) : MsgModel()
 
 @Serializable
 @SerialName("At")
