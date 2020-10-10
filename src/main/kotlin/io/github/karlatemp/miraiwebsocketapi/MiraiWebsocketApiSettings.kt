@@ -8,9 +8,11 @@
 
 package io.github.karlatemp.miraiwebsocketapi
 
+import com.google.common.cache.CacheBuilder
 import kotlinx.serialization.Serializable
 import net.mamoe.mirai.console.data.*
 import net.mamoe.mirai.console.util.ConsoleExperimentalApi
+import java.util.concurrent.TimeUnit
 
 @OptIn(ConsoleExperimentalApi::class)
 object MiraiWebsocketApiSettings : AbstractPluginData(), PluginConfig {
@@ -23,14 +25,38 @@ object MiraiWebsocketApiSettings : AbstractPluginData(), PluginConfig {
         "ROOT"
         //"INITKEY" + UUID.randomUUID().toString().replace("-", "")
     )
-    val cache by value(CacheSetting())
+    val messageSourceCache by value(CacheSetting())
+    val replyCache by value(CacheSetting())
+    val prettyPrint by value(false)
 
     @Serializable
     data class CacheSetting(
         val maximumSize: Long = 2000L,
         val expireTime: Long = 2,
-        val expireTimeUnit: String = "HOUR"
-    )
+        val expireTimeUnit: String = "HOURS"
+    ) {
+        fun <K, V> CacheBuilder<K, V>.buildCache(
+            path: String
+        ): CacheBuilder<K, V> {
+            val logger = MiraiWebsocketApi.logger
+            logger.info("Cache[$path] setting:")
+            return this.let { builder ->
+                if (expireTime == 0L) {
+                    logger.info("    Expire time: NO")
+                    builder
+                } else {
+                    logger.info("    Expire time: $expireTime $expireTimeUnit")
+                    builder.expireAfterWrite(expireTime, TimeUnit.valueOf(expireTimeUnit))
+                }
+            }.let { builder ->
+                logger.info("    Maximum size: $maximumSize")
+                if (maximumSize == 0L)
+                    builder
+                else
+                    builder.maximumSize(2000)
+            }
+        }
+    }
 
     override fun onInit(owner: PluginDataHolder, storage: PluginDataStorage) {
     }

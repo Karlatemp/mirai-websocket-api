@@ -28,25 +28,17 @@ import net.mamoe.mirai.utils.internal.DeferredReusableInput
 import java.net.URI
 import java.nio.file.Paths
 import java.util.*
-import java.util.concurrent.TimeUnit
 
-val json = Json { encodeDefaults = false }
+val json by lazy {
+    Json {
+        encodeDefaults = false
+        prettyPrint = MiraiWebsocketApiSettings.prettyPrint
+    }
+}
 
 val messageSourceCache by lazy {
-    val setting = MiraiWebsocketApiSettings.cache
     CacheBuilder.newBuilder()
-        .let { builder ->
-            if (setting.expireTime == 0L)
-                builder
-            else
-                builder.expireAfterWrite(setting.expireTime, TimeUnit.valueOf(setting.expireTimeUnit))
-        }
-        .let { builder ->
-            if (setting.maximumSize == 0L)
-                builder
-            else
-                builder.maximumSize(2000)
-        }
+        .run { MiraiWebsocketApiSettings.messageSourceCache.run { buildCache("Message Source") } }
         .build<String, MessageSource>()
 }
 

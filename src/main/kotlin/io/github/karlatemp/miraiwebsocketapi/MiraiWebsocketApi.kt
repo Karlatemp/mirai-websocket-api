@@ -71,6 +71,8 @@ object MiraiWebsocketApi : KotlinPlugin(
         logger.info("Enabling MiraiWebsocketApi[$version]")
         logger.info("Reloading configs...")
         MiraiWebsocketApiSettings.reload()
+        messageSourceCache
+        replayCache
         logger.info("User   = " + MiraiWebsocketApiSettings.user)
         logger.info("Passwd = " + MiraiWebsocketApiSettings.passwd)
         val server = embeddedServer(CIO, environment = applicationEngineEnvironment {
@@ -126,9 +128,11 @@ object MiraiWebsocketApi : KotlinPlugin(
 
 val messageBus = ConcurrentLinkedList<suspend (OutgoingAction, String) -> Unit>()
 
-val replayCache: Cache<String, Contact> = CacheBuilder.newBuilder()
-    .expireAfterWrite(1, TimeUnit.HOURS)
-    .build()
+val replayCache: Cache<String, Contact> by lazy {
+    CacheBuilder.newBuilder()
+        .run { MiraiWebsocketApiSettings.replyCache.run { buildCache("Reply") } }
+        .build()
+}
 
 fun saveReplyCache(contact: Contact): String {
     val id = "RP." + System.currentTimeMillis() + "/" + UUID.randomUUID()
