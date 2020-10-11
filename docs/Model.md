@@ -34,7 +34,7 @@
 // 一个 Message Chain
 [
 {"type": "MessageSource", "id": "MESSAGE_SOURCE_ID"},
-{"type": "Plain", "msg": "我永远喜欢him188moe"}
+{"type": "Plain", "text": "我永远喜欢him188moe"}
 ]
 ```
 ### MessageSource
@@ -47,7 +47,7 @@ MessageSource id 可用于回复和撤回消息
 
 ### PlainText
 ```json5
-{"type": "PlainText", "msg": "纯文本!"}
+{"type": "Plain", "text": "纯文本!"}
 ```
 
 ### At
@@ -85,7 +85,8 @@ url说明
     - file://.....
     - http://....
     - https://....
-    - base64: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
+    - base64:\[图片数据的Base64]
+        - base64:iVBORw0KGgoAA......
 
 ### FlashImage
 *闪照*
@@ -155,7 +156,7 @@ Also see: [ServiceMessage](https://github.com/mamoe/mirai/blob/a774b8a7062fbd267
   "replyKey": "RANDOM REPLY KEY", // [STRING], 用于回复的 key
   "message": [ // [MessageChain]
     {"type": "MessageSource", "id": "ABCDEF"},
-    {"type": "Plain", "msg": "我永远喜欢hso188moe"}
+    {"type": "Plain", "text": "我永远喜欢hso188moe"}
   ],
   "bot": 123456789 // [LONG]
 }
@@ -181,7 +182,7 @@ Also see: [ServiceMessage](https://github.com/mamoe/mirai/blob/a774b8a7062fbd267
   "bot": 123456789 // [LONG]
 }
 ```
-注: 要回复 TempMessage 只能通过 ReplyMessage
+注: 要回复 TempMessage 只能通过 [ReplyMessage](#ReplyMessage)
 
 ## 操作列表
 
