@@ -1,22 +1,3 @@
-**Mirai WebSocket API 不提供 http api, 仅提供WS API**
-
-以下使用 WS API 简称 Mirai WebSocket API
-
-# 建立连接
-
-启动 mirai-console 时, WS API 会打印出服务器运行地址, 以及连接账号信息.
-
-通过与 `ws://localhost:7247/` 建立连接, 就能够开始使用 WS API
-
-## 鉴权
-
-使用 WS API, 需要完成鉴权, 鉴权不复杂, 只需要在建立 ws 连接后直接把账户和密码发过去即可
-```js
-var socket = new WebSocket("ws//localhost:7247/");
-socket.send("USER");
-socket.send("PASSWD");
-// ....
-```
 
 ## 数据结构
 ### FriendModel
@@ -168,6 +149,7 @@ Also see: [ServiceMessage](https://github.com/mamoe/mirai/blob/a774b8a7062fbd267
 ### GroupMessage
 ```json5
 {
+  "type": "GroupMessage",
   "group" : {}, // [GroupModel]
   "sender": {}, // [MemberModel]
   "replyKey": "RANDOM REPLY KEY", // [STRING], 用于回复的 key
@@ -175,117 +157,96 @@ Also see: [ServiceMessage](https://github.com/mamoe/mirai/blob/a774b8a7062fbd267
     {"type": "MessageSource", "id": "ABCDEF"},
     {"type": "Plain", "msg": "我永远喜欢hso188moe"}
   ],
-  "isMessageEvent": true,
   "bot": 123456789 // [LONG]
 }
 ```
 ### FriendMessage
 ```json5
 {
+  "type": "FriendMessage",
   "sender": {}, // [FriendModel]
   "message": [], // [MessageChain]
   "replyKey": "RANDOM REPLY KEY", // [STRING], 用于回复的 key
-  "isMessageEvent": true,
   "bot": 123456789 // [LONG]
 }
 ```
 ### TempMessage
 ```json5
 {
+  "type": "TempMessage",
   "group": {}, // [GroupModel]
   "sender": {}, // [FriendModel]
   "message": [], // [MessageChain]
   "replyKey": "RANDOM REPLY KEY", // [STRING], 用于回复的 key
-  "isMessageEvent": true,
   "bot": 123456789 // [LONG]
 }
 ```
 注: 要回复 TempMessage 只能通过 ReplyMessage
 
-### ActionResult
-
-#### Success
-代表成功
-```json5
-{
-  "type": "Success",
-  "isMessageEvent": false,
-  "metadata": "" // 由对接程序发送过来的 metadata, 如果对接程序发送的操作没有定义metadata, 那么不存在metadata
-}
-```
-
-#### Failed
-代表操作失败, 或者遇到错误
-```json5
-{
-  "type": "Success",
-  "isMessageEvent": false,
-  "metadata": "", // 由对接程序发送过来的 metadata, 如果对接程序发送的操作没有定义metadata, 那么不存在metadata
-  "error": "短错误描述",
-  "fullError": "完整错误"
-}
-```
-
 ## 操作列表
-注, 此部分是由对接程序发送给WS API的可用操作列表,
-全部操作都允许附加一个 String 类型的 `metadata` 用于获取操作状态
 
 ### ReplyMessage
 回复一条信息
 ```json5
 {
   "type": "Reply",
-  "id": "REPLY ID", // 通过 GroupMessage/FriendMessage/TempMessage获取到的 replyKey
-  "message": [], // [MessageChain]
-  // "metadata": "KEY_RANDOM"
+  "content": {  
+    "id": "REPLY ID", // 通过 GroupMessage/FriendMessage/TempMessage获取到的 replyKey
+    "message": [], // [MessageChain]
+  }
 }
 ```
+操作返回:
+
+| key       | desc |
+| -----     | ----- |
+| receiptId | 可用于 [RecallReceipt](#RecallReceipt) |
+| sourceId  | MESSAGE SOURCE ID |
 
 ### SendToGroup
 主动发送信息到一个群组
 ```json5
 {
   "type": "SendToGroup",
-  "bot": 123456789, // [LONG] BOT id, 必须
-  "group": 123456789, // [LONG] 群号, 必须
-  "message": [], // [MessageChain]
-  // "metadata": "KEY_RANDOM"
+  "content": {
+    "bot": 123456789, // [LONG] BOT id, 必须
+    "group": 123456789, // [LONG] 群号, 必须
+    "message": [], // [MessageChain]
+  }
 }
 ```
+操作返回:
+
+| key       | desc |
+| -----     | ----- |
+| receiptId | 可用于 [RecallReceipt](#RecallReceipt) |
+| sourceId  | MESSAGE SOURCE ID |
 
 ### SendToFriend
 主动发送信息到一个群组
 ```json5
 {
   "type": "SendToGroup",
-  "bot": 123456789, // [LONG] BOT id, 必须
-  "friend": 123456789, // [LONG] 好友QQ号, 必须
-  "message": [], // [MessageChain]
-  // "metadata": "KEY_RANDOM"
-}
-```
-
-#### SendMessageResponse
-SendToGroup/SendToFriend 成功后, 会收到
-```json5
-{
-  "type": "Success",
-  "isMessageEvent": false,
-  "metadata": "", // 由对接程序发送过来的 metadata, 如果对接程序发送的操作没有定义metadata, 那么不存在metadata
-  "extendData": {
-    "receiptId": "RECEIPT ID",
-    "sourceId": "SOURCE ID"
+  "content": {
+    "bot": 123456789, // [LONG] BOT id, 必须
+    "friend": 123456789, // [LONG] 好友QQ号, 必须
+    "message": [] // [MessageChain]
   }
 }
 ```
-extendData中的两个数据可用于撤回消息
+操作返回:
+
+| key       | desc |
+| -----     | ----- |
+| receiptId | 可用于 [RecallReceipt](#RecallReceipt) |
+| sourceId  | MESSAGE SOURCE ID |
 
 ### RecallReceipt
 撤回机器人发送的消息
 ```json5
 {
-"type": "RecallReceipt", "receipt": "RECEIPT ID",
-// "metadata": "KEY_RANDOM"
+"type": "RecallReceipt",
+"content":{ "receipt": "RECEIPT ID" }
 }
 ```
 ### Recall
@@ -293,8 +254,7 @@ extendData中的两个数据可用于撤回消息
 ```json5
 {
 "type": "Recall",
-"messageSource": "MESSAGE SOURCE ID", // 可以通过 SendToXXX 或者 XXXMessage的message中的MessageSource 获取
-// "metadata": "KEY_RANDOM"
+"content":{"messageSource": "MESSAGE SOURCE ID"} // 可以通过 SendToXXX 或者 XXXMessage的message中的MessageSource 获取
 }
 ```
 ### MuteMember
@@ -302,9 +262,10 @@ extendData中的两个数据可用于撤回消息
 ```json5
 {
 "type": "MuteMember",
-"group": 123456789, // [LONG] 群号
-"member": 987654321, // 群成员QQ号
-"time": 60, // 单位: 秒
-// "metadata": "KEY_RANDOM"
+  "content": {
+    "group": 123456789, // [LONG] 群号
+    "member": 987654321, // 群成员QQ号
+    "time": 60 // 单位: 秒
+  }
 }
 ```

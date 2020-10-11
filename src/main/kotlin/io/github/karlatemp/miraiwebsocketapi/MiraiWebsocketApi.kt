@@ -41,7 +41,6 @@ import net.mamoe.mirai.message.*
 import net.mamoe.mirai.message.data.recall
 import org.slf4j.LoggerFactory
 import java.util.*
-import java.util.concurrent.TimeUnit
 
 internal val metadata by lazy {
     val properties = Properties()
@@ -140,9 +139,11 @@ fun saveReplyCache(contact: Contact): String {
     return id
 }
 
-val receiptCache: Cache<String, MessageReceipt<*>> = CacheBuilder.newBuilder()
-    .expireAfterWrite(1, TimeUnit.HOURS)
-    .build()
+val receiptCache: Cache<String, MessageReceipt<*>> by lazy {
+    CacheBuilder.newBuilder()
+        .run { MiraiWebsocketApiSettings.receiptCache.run { buildCache("Receipt") } }
+        .build()
+}
 
 fun saveReceiptCache(receipt: MessageReceipt<*>): String {
     val id = "REC." + System.currentTimeMillis() + "/" + UUID.randomUUID()

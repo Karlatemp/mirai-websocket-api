@@ -27,6 +27,7 @@ object MiraiWebsocketApiSettings : AbstractPluginData(), PluginConfig {
     )
     val messageSourceCache by value(CacheSetting())
     val replyCache by value(CacheSetting())
+    val receiptCache by value(CacheSetting())
     val prettyPrint by value(false)
 
     @Serializable

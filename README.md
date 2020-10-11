@@ -61,6 +61,11 @@ messageSourceCache:
   expireTime: 2
   expireTimeUnit: HOURS
 
+receiptCache:
+  maximumSize: 2000
+  expireTime: 2
+  expireTimeUnit: HOURS
+
 ```
 
 ## 更新日志
@@ -69,5 +74,6 @@ messageSourceCache:
 ## 文档
 
 * **[API文档参考](docs/API.md)**
+* [数据结构参考](docs/Model.md)
 * [示例使用](src/test/kotlin/ShitListing.kt)
 * [Proto](proto/proto.proto)
