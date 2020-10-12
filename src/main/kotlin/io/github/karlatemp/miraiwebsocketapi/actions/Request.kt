@@ -32,7 +32,7 @@ data class Request(
             element("type", String.serializer().descriptor)
             element("requestId", String.serializer().descriptor, isOptional = true)
             element(
-                "msg",
+                "content",
                 buildSerialDescriptor(
                     "kotlinx.serialization.Sealed<${IncomingAction::class.java.name}>",
                     StructureKind.MAP
