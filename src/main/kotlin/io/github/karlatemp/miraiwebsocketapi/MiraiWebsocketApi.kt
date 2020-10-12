@@ -14,6 +14,8 @@ import com.google.common.cache.CacheBuilder
 import io.github.karlatemp.miraiwebsocketapi.account.Account
 import io.github.karlatemp.miraiwebsocketapi.actions.*
 import io.github.karlatemp.miraiwebsocketapi.event.AccountTryLoginEvent
+import io.github.karlatemp.miraiwebsocketapi.http.logonSessions
+import io.github.karlatemp.miraiwebsocketapi.http.setupHttp
 import io.ktor.application.*
 import io.ktor.http.cio.websocket.*
 import io.ktor.routing.*
@@ -156,10 +158,10 @@ suspend fun <T1, T2> ConcurrentLinkedList<suspend (T1, T2) -> Unit>.post(m1: T1,
     forEach { kotlin.runCatching { it(m1, m2) } }
 }
 
-suspend fun selectUser(user: String, passwd: String): Account? {
+suspend fun selectUser(user: String, passwd: String, session: WebSocketServerSession): Account? {
     // TODO: 多用户
     if (user == MiraiWebsocketApiSettings.user && passwd == MiraiWebsocketApiSettings.passwd) {
-        return Account.Root()
+        return Account.Root(session)
     }
     return null
 }
@@ -168,6 +170,7 @@ suspend fun selectUser(user: String, passwd: String): Account? {
 fun Application.web() {
     install(WebSockets)
     routing {
+        setupHttp()
         webSocket("/") {
             // region helpers
             suspend fun <T> rep(serializer: SerializationStrategy<T>, value: T) =
@@ -188,14 +191,18 @@ fun Application.web() {
             suspend fun Request?.repErr(error: String) = repErr(error, error)
             suspend fun Request?.repErr(error: Throwable) = repErr(error.toString(), error.stackTraceToString())
             // endregion
+            val logonSessionId = "WS.ST" + UUID.randomUUID() + "/SNOW" + System.currentTimeMillis()
             // region login
             val account = kotlin.runCatching {
                 val user = (incoming.receive() as Frame.Text).readText()
                 val passwd = (incoming.receive() as Frame.Text).readText()
-                val selectedAccount = selectUser(user, passwd)
+                val selectedAccount = selectUser(user, passwd, this)
                 if (selectedAccount != null) {
                     if (!AccountTryLoginEvent(selectedAccount, this).also { it.broadcast() }.isCancelled) {
-                        null.repOk()
+                        null.repOk(buildJsonObject {
+                            logonSessions[logonSessionId] = selectedAccount
+                            put("session", logonSessionId)
+                        })
                         return@runCatching selectedAccount
                     }
                 }
@@ -203,7 +210,6 @@ fun Application.web() {
                 return@webSocket
             }.getOrNull() ?: return@webSocket
             // endregion
-
 
             val hook = messageBus.insertLast { action, message ->
                 if (account.shouldBroadcast(action))
@@ -310,6 +316,7 @@ fun Application.web() {
                 }
             } finally {
                 hook.remove()
+                logonSessions.remove(logonSessionId)
             }
         }
     }

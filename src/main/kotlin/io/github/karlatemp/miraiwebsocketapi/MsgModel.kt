@@ -12,6 +12,7 @@ package io.github.karlatemp.miraiwebsocketapi
 
 import com.google.common.cache.Cache
 import com.google.common.cache.CacheBuilder
+import io.github.karlatemp.miraiwebsocketapi.http.imageCache
 import io.ktor.client.*
 import io.ktor.client.features.*
 import io.ktor.client.request.*
@@ -74,6 +75,7 @@ suspend fun ImageModel.upload(source: Contact?): Image {
     id?.let { return Image(it) }
     if (source == null) error("No source found.")
     val url = this.url ?: error("No imageId or url found.")
+    val ed = url.substringAfter(':')
     return when (url.substringBefore(':', "")) {
         "file" -> {
             Paths.get(URI(url)).toFile().uploadAsImage(source)
@@ -82,7 +84,10 @@ suspend fun ImageModel.upload(source: Contact?): Image {
             downClient.get<ByteArray>(url).uploadAsImage(source)
         }
         "base64", "b64" -> {
-            Base64.getMimeDecoder().decode(url.substringAfter(':')).uploadAsImage(source)
+            Base64.getMimeDecoder().decode(ed).uploadAsImage(source)
+        }
+        "wsapi" -> {
+            (imageCache[ed] ?: error("Image $ed not found in WS API")).uploadAsImage(source)
         }
         else -> error("Unknown how to upload $url")
     }
