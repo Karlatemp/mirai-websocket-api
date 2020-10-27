@@ -92,10 +92,17 @@ url说明
 *闪照*
 ```json5
 {"type": "FlashImage", "image": {
-  "type": "Image",
   //....
 }}
 ```
+其中 Image 为 [Image](#Image), 且无 `type` 字段
+
+```json5
+{"type": "FlashImage", "image": {
+  "url": "https://404notfound.com/notfound.jpg"
+}}
+```
+
 
 ### Poke
 ```json5
