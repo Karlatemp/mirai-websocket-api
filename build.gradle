@@ -1,3 +1,5 @@
+import java.nio.file.Files
+
 /*
  * Copyright (c) 2018-2020 Karlatemp. All rights reserved.
  * @author Karlatemp <karlatemp@vip.qq.com> <https://github.com/Karlatemp>
@@ -85,5 +87,19 @@ processResources {
                 ]
         ])
         include 'miraiwsapi.properties'
+    }
+}
+
+task releaseCiJar() {
+    dependsOn(shadowJar)
+    doFirst {
+        def file = shadowJar.archiveFile.get().asFile
+        def target = rootProject.file("build/ci")
+        target.mkdirs()
+        def targetFile = new File(target, "wsapi.jar")
+        targetFile.delete()
+        file.withInputStream { stream ->
+            Files.copy(stream, targetFile.toPath())
+        }
     }
 }
