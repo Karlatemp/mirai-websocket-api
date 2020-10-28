@@ -25,5 +25,5 @@ jobs:
         with:
           upload_url: ${{ github.event.release.upload_url }}
           asset_path: ./build/ci/wsapi.jar
-          asset_name: mirai-websocket-api-${{ github.event.release.tag_name }}.zip
-          asset_content_type: application/zip
+          asset_name: mirai-websocket-api-${{ github.event.release.tag_name }}.jar
+          asset_content_type: application/jar
