@@ -18,6 +18,18 @@ socket.send("PASSWD");
 // ....
 ```
 注: 发送密码后 WS API 会发送一个 [ActionResult](#ActionResult), 无 id
+```json5
+{
+    "type": "ActionResult",
+    "success": true,
+    "result": {
+        "content": {
+            "session": "NEW.WEBSOCKET.SESSION" // 建立的 session id, 可用于 http api 鉴权
+        }
+    }
+}
+```
+Also see [Http API](http.md)
 
 ## 发送请求
 发送给WS API的数据, 均满足以下格式
@@ -31,6 +43,8 @@ socket.send("PASSWD");
 }
 ```
 Also see: [Request Actions](Model.md#操作列表)
+
+**session** 可用于 WS API 提供的 [http api](http.md) 的鉴权
 
 ## 解析数据
 

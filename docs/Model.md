@@ -277,3 +277,43 @@ Also see: [ServiceMessage](https://github.com/mamoe/mirai/blob/a774b8a7062fbd267
   }
 }
 ```
+### ListGroups
+获取 bot 的所在群列表
+```json5
+{
+"type": "ListGroups",
+"content": {
+  "bot": 123456789 // [LONG] Bot id
+}
+}
+```
+操作返回:
+*自己试试不就有了*
+
+### ListFriends
+```json5
+{
+"type": "ListFriends",
+"content": {
+  "bot": 123456789 // [LONG] Bot id
+}
+}
+```
+操作返回:
+*自己试试不就有了*
+
+### GroupVerbose
+```json5
+{
+"type": "GroupVerbose",
+"content": {
+  "bot": 123456789, // [LONG] Bot id
+  "group": 987654321, // [LONG] group id
+  "noMembers": true // [Optional] [BOOLEAN] 是否不获取 members, 默认 true
+}
+}
+```
+操作返回:
+*自己试试不就有了*
+
+

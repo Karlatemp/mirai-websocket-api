@@ -16,6 +16,9 @@ import io.github.karlatemp.miraiwebsocketapi.actions.*
 import io.github.karlatemp.miraiwebsocketapi.event.AccountTryLoginEvent
 import io.github.karlatemp.miraiwebsocketapi.http.logonSessions
 import io.github.karlatemp.miraiwebsocketapi.http.setupHttp
+import io.github.karlatemp.miraiwebsocketapi.internal.listFriends
+import io.github.karlatemp.miraiwebsocketapi.internal.listGroups
+import io.github.karlatemp.miraiwebsocketapi.internal.verbose
 import io.ktor.application.*
 import io.ktor.http.cio.websocket.*
 import io.ktor.routing.*
@@ -24,7 +27,10 @@ import io.ktor.server.engine.*
 import io.ktor.util.*
 import io.ktor.websocket.*
 import kotlinx.serialization.SerializationStrategy
-import kotlinx.serialization.json.*
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 import net.mamoe.mirai.Bot
 import net.mamoe.mirai.console.plugin.jvm.JvmPlugin
 import net.mamoe.mirai.console.plugin.jvm.JvmPluginDescriptionBuilder
@@ -191,7 +197,9 @@ fun Application.web() {
             suspend fun Request?.repErr(error: String) = repErr(error, error)
             suspend fun Request?.repErr(error: Throwable) = repErr(error.toString(), error.stackTraceToString())
             // endregion
-            val logonSessionId = "WS.ST" + UUID.randomUUID() + "/SNOW" + System.currentTimeMillis()
+            val logonSessionId =
+                "WS.ST" + (UUID.randomUUID().toString()
+                    .replace("-", "")) + ".STNOW" + System.currentTimeMillis()
             // region login
             val account = kotlin.runCatching {
                 val user = (incoming.receive() as Frame.Text).readText()
@@ -326,6 +334,35 @@ fun Application.web() {
                                         } else {
                                             request.repOk(friend.sendMessage(action.message.toChain(friend)).json())
                                         }
+                                    }
+                                }
+                                is IncomingAction.GroupVerbose -> {
+                                    val bot = Bot.getInstanceOrNull(action.bot)
+                                    if (bot == null) {
+                                        request.repErr("Bot ${action.bot} not found.")
+                                    } else {
+                                        val group = bot.getGroupOrNull(action.group)
+                                        if (group == null) {
+                                            request.repErr("Group ${action.group} not found in bot ${action.bot}")
+                                        } else {
+                                            request.repOk(group.verbose(action.noMembers))
+                                        }
+                                    }
+                                }
+                                is IncomingAction.ListFriends -> {
+                                    val bot = Bot.getInstanceOrNull(action.bot)
+                                    if (bot == null) {
+                                        request.repErr("Bot ${action.bot} not found.")
+                                    } else {
+                                        request.repOk(bot.listFriends())
+                                    }
+                                }
+                                is IncomingAction.ListGroups -> {
+                                    val bot = Bot.getInstanceOrNull(action.bot)
+                                    if (bot == null) {
+                                        request.repErr("Bot ${action.bot} not found.")
+                                    } else {
+                                        request.repOk(bot.listGroups())
                                     }
                                 }
                             }

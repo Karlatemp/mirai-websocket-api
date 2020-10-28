@@ -1,3 +1,7 @@
+# 2.0.0-dev-4
+
+- 部分 http api 支持
+
 # 2.0.0-dev-3
 
 - 更新到 `MiraiConsole 1.0-RC`

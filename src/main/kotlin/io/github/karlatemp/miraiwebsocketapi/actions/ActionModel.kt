@@ -64,6 +64,22 @@ sealed class IncomingAction {
         val messageSource: String
     ) : IncomingAction()
 
+    @SerialName("ListGroups")
+    @Serializable
+    data class ListGroups(val bot: Long) : IncomingAction()
+
+    @SerialName("ListFriends")
+    @Serializable
+    data class ListFriends(val bot: Long) : IncomingAction()
+
+    @SerialName("GroupVerbose")
+    @Serializable
+    data class GroupVerbose(
+        val bot: Long,
+        val group: Long,
+        val noMembers: Boolean = true
+    ) : IncomingAction()
+
 }
 
 @Serializable(with = ActionResult.ActionResultSerializer::class)

@@ -13,6 +13,9 @@ import com.google.common.cache.CacheBuilder
 import io.github.karlatemp.miraiwebsocketapi.MiraiWebsocketApiSettings
 import io.github.karlatemp.miraiwebsocketapi.account.Account
 import io.github.karlatemp.miraiwebsocketapi.get
+import io.github.karlatemp.miraiwebsocketapi.internal.listFriends
+import io.github.karlatemp.miraiwebsocketapi.internal.listGroups
+import io.github.karlatemp.miraiwebsocketapi.internal.verbose
 import io.github.karlatemp.miraiwebsocketapi.set
 import io.ktor.application.*
 import io.ktor.http.*
@@ -21,17 +24,21 @@ import io.ktor.request.*
 import io.ktor.response.*
 import io.ktor.routing.*
 import io.ktor.util.pipeline.*
-import kotlinx.serialization.json.JsonObjectBuilder
-import kotlinx.serialization.json.buildJsonObject
-import kotlinx.serialization.json.put
-import kotlinx.serialization.json.putJsonObject
+import kotlinx.serialization.json.*
+import net.mamoe.mirai.Bot
+import net.mamoe.mirai.contact.Group
+import net.mamoe.mirai.getGroupOrNull
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 
 val logonSessions = ConcurrentHashMap<String, Account>()
 val CONTENT_JSON = ContentType.parse("application/json")
 
-fun error(
+private val prettyJson = Json {
+    prettyPrint = true
+}
+
+private fun error(
     code: Int,
     error: String? = null,
     errorDetail: String? = null,
@@ -43,7 +50,24 @@ fun error(
         put("errorDetail", errorDetail ?: it)
     }
     content?.let { putJsonObject("content", it) }
+}.let { prettyJson.encodeToString(JsonObject.serializer(), it) }
+
+
+private fun error0(
+    code: Int,
+    error: String? = null,
+    errorDetail: String? = null,
+    content: JsonElement? = null
+): String = buildJsonObject {
+    put("code", code)
+    error?.let {
+        put("error", it)
+        put("errorDetail", errorDetail ?: it)
+    }
+    content?.let { put("content", it) }
 }.toString()
+
+private fun interrupt(response: String): Nothing = throw Interrupt(response)
 
 private val ERROR_INVALID_SESSION = error(5, "Invalid Session")
 private val ERROR_INVALID_PARAM = error(7, "Invalid Parameter")
@@ -79,6 +103,7 @@ fun Routing.setupHttp() {
     post("/uploadImage") {
         interrup {
             checkSession()
+            // TODO: Check perms
             val allParts = call.receiveMultipart().readAllParts()
             val bytes = allParts.file("image").streamProvider().readBytes()
             val iid = "IMG.K" + UUID.randomUUID().toString().replace("-", "")
@@ -103,6 +128,53 @@ fun Routing.setupHttp() {
         }
         call.respondBytes(image, ContentType.parse("image/png"))
     }
+
+
+    get("/listGroups") {
+        interrup {
+            checkSession()
+            // TODO: Check perms
+            call.respondText(error0(0, content = bot().listGroups()))
+        }
+    }
+    get("/listFriends") {
+        interrup {
+            checkSession()
+            // TODO: Check perms
+            call.respondText(error0(0, content = bot().listFriends()))
+        }
+    }
+    get("/verboseGroup") {
+        interrup {
+            checkSession()
+            // TODO: Check perms
+            val noMembers = call.parameters["noMembers"]?.toBoolean() ?: false
+            call.respondText(error0(0, content = group().verbose(noMembers)))
+        }
+    }
+}
+
+internal fun PipelineContext<Unit, ApplicationCall>.parameter(key: String): String {
+    return call.parameters[key] ?: interrupt(error(1, "parameter \$$key not found"))
+}
+
+internal fun PipelineContext<Unit, ApplicationCall>.bot(): Bot {
+    val botParameter = call.parameters["bot"] ?: interrupt(
+        error(1, "parameter \$bot not found")
+    )
+    return Bot.getInstanceOrNull(
+        botParameter.toLongOrNull() ?: interrupt(error(1, "$botParameter is not a number"))
+    ) ?: interrupt(error(1, "Bot $botParameter not found"))
+}
+
+internal fun PipelineContext<Unit, ApplicationCall>.group(): Group {
+    val bot = bot()
+    val group = call.parameters["group"] ?: interrupt(
+        error(2, "parameter \$group not found")
+    )
+    return bot.getGroupOrNull(
+        group.toLongOrNull() ?: interrupt(error(2, "$group is not a number"))
+    ) ?: interrupt(error(1, "Group $group not found in bot ${bot.id}"))
 }
 
 /**
