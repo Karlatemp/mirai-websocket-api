@@ -10,13 +10,15 @@ package io.github.karlatemp.miraiwebsocketapi.account
 
 import io.github.karlatemp.miraiwebsocketapi.actions.IncomingAction
 import io.github.karlatemp.miraiwebsocketapi.actions.OutgoingAction
+import io.ktor.websocket.*
 import java.util.concurrent.ConcurrentHashMap
 
 open class Account internal constructor(
     val username: String,
+    val session: WebSocketServerSession,
     val metadata: MutableMap<String, Any?>,
 ) {
-    constructor(username: String) : this(username, ConcurrentHashMap())
+    constructor(username: String, session: WebSocketServerSession) : this(username, session, ConcurrentHashMap())
 
     override fun toString(): String {
         return "Account($username)"
@@ -32,7 +34,7 @@ open class Account internal constructor(
         return true
     }
 
-    class Root : Account("root") {
+    class Root(session: WebSocketServerSession) : Account("root", session) {
         override suspend fun shouldBroadcast(action: OutgoingAction): Boolean = true
         override suspend fun isAllowed(action: IncomingAction): Boolean = true
         override fun toString(): String {
