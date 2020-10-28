@@ -22,9 +22,7 @@ import io.ktor.server.engine.*
 import io.ktor.util.*
 import io.ktor.websocket.*
 import kotlinx.serialization.SerializationStrategy
-import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.buildJsonObject
-import kotlinx.serialization.json.put
+import kotlinx.serialization.json.*
 import net.mamoe.mirai.Bot
 import net.mamoe.mirai.console.plugin.jvm.JvmPlugin
 import net.mamoe.mirai.console.plugin.jvm.JvmPluginDescriptionBuilder
@@ -177,11 +175,13 @@ fun Application.web() {
                 rep(OutgoingSerializer, ActionResult(this?.requestId, true, null, null, ext))
 
             suspend fun Request?.repOk() = repOk(null)
+            suspend fun repResult(result: ActionResult) = rep(
+                OutgoingSerializer, result
+            )
 
             suspend fun Request?.repErr(
                 error: String, full: String
-            ) = rep(
-                OutgoingSerializer,
+            ) = repResult(
                 ActionResult(this?.requestId, false, error, full, null)
             )
 
@@ -218,12 +218,32 @@ fun Application.web() {
 
                 for (frame in incoming) {
                     if (frame is Frame.Text) {
-                        val request = kotlin.runCatching {
-                            json.decodeFromString(Request.RequestSerializer, frame.readText())
-                        }.getOrElse { exception ->
-                            null.repErr(exception)
-                            return@webSocket
+                        val requestContent = frame.readText()
+                        val requestBox = kotlin.runCatching {
+                            json.decodeFromString(Request.RequestSerializer, requestContent)
                         }
+                        if (requestBox.isFailure) {
+                            val json = kotlin.runCatching {
+                                json.decodeFromString(JsonObject.serializer(), requestContent)
+                            }.getOrNull()
+                            val error = requestBox.exceptionOrNull()!!
+                            if (json == null) {
+                                null.repErr(error)
+                                return@webSocket
+                            } else {
+                                repResult(
+                                    ActionResult(
+                                        (json["requestId"] as? JsonPrimitive)?.content,
+                                        false,
+                                        error.toString(),
+                                        error.stackTraceToString(),
+                                        null
+                                    )
+                                )
+                                continue
+                            }
+                        }
+                        val request = requestBox.getOrThrow()
                         val action = request.action
 
                         try {
