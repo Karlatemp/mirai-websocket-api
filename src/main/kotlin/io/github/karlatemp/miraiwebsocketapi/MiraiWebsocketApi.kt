@@ -39,8 +39,7 @@ import net.mamoe.mirai.contact.Contact
 import net.mamoe.mirai.event.Event
 import net.mamoe.mirai.event.Listener
 import net.mamoe.mirai.event.broadcast
-import net.mamoe.mirai.event.events.MemberMuteEvent
-import net.mamoe.mirai.event.events.MessageRecallEvent
+import net.mamoe.mirai.event.events.*
 import net.mamoe.mirai.event.subscribeAlways
 import net.mamoe.mirai.getFriendOrNull
 import net.mamoe.mirai.getGroupOrNull
@@ -130,6 +129,56 @@ object MiraiWebsocketApi : KotlinPlugin(
                         time = durationSeconds,
                         operator = operator?.toModel(),
                         bot = bot.id
+                    ).post()
+                }
+                is BotMuteEvent -> {
+                    OutgoingAction.BotMuteEvent(
+                        group = group.toModel(),
+                        time = durationSeconds,
+                        operator = operator?.toModel(),
+                        bot = bot.id
+                    ).post()
+                }
+                is MemberUnmuteEvent -> {
+                    OutgoingAction.MemberUnmuteEvent(
+                        member = member.toModel(),
+                        group = group.toModel(),
+                        operator = operator?.toModel(),
+                        bot = bot.id
+                    ).post()
+                }
+                is BotUnmuteEvent -> {
+                    OutgoingAction.BotUnmuteEvent(
+                        group = group.toModel(),
+                        operator = operator.toModel(),
+                        bot = bot.id
+                    ).post()
+                }
+                is BotGroupPermissionChangeEvent -> {
+                    OutgoingAction.BotGroupPermissionChangeEvent(
+                        bot = bot.id,
+                        group = group.toModel(),
+                        origin = origin.name.toLowerCase(),
+                        new = new.name.toLowerCase()
+                    ).post()
+                }
+                is MemberSpecialTitleChangeEvent -> {
+                    OutgoingAction.MemberSpecialTitleChangeEvent(
+                        bot = bot.id,
+                        group = group.toModel(),
+                        origin = origin,
+                        new = new,
+                        operator = operator?.toModel(),
+                        member = member.toModel()
+                    ).post()
+                }
+                is MemberPermissionChangeEvent -> {
+                    OutgoingAction.MemberPermissionChangeEvent(
+                        bot = bot.id,
+                        member = member.toModel(),
+                        group = group.toModel(),
+                        origin = origin.name.toLowerCase(),
+                        new = new.name.toLowerCase()
                     ).post()
                 }
                 is MessageRecallEvent -> {

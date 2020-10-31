@@ -278,6 +278,62 @@ sealed class OutgoingAction() {
         val time: Int,
         val operator: MemberModel? = null
     ) : OutgoingAction()
+
+    @Serializable
+    @SerialName("MemberUnmuteEvent")
+    data class MemberUnmuteEvent(
+        val group: GroupModel,
+        val member: MemberModel,
+        val bot: Long,
+        val operator: MemberModel? = null
+    ) : OutgoingAction()
+
+    @Serializable
+    @SerialName("BotUnmuteEvent")
+    data class BotUnmuteEvent(
+        val group: GroupModel,
+        val bot: Long,
+        val operator: MemberModel? = null
+    ) : OutgoingAction()
+
+    @Serializable
+    @SerialName("BotMuteEvent")
+    data class BotMuteEvent(
+        val group: GroupModel,
+        val bot: Long,
+        val time: Int,
+        val operator: MemberModel? = null
+    ) : OutgoingAction()
+
+    @Serializable
+    @SerialName("BotGroupPermissionChangeEvent")
+    data class BotGroupPermissionChangeEvent(
+        val group: GroupModel,
+        val bot: Long,
+        val origin: String,
+        val new: String
+    ) : OutgoingAction()
+
+    @Serializable
+    @SerialName("MemberPermissionChangeEvent")
+    data class MemberPermissionChangeEvent(
+        val group: GroupModel,
+        val member: MemberModel,
+        val bot: Long,
+        val origin: String,
+        val new: String
+    ) : OutgoingAction()
+
+    @Serializable
+    @SerialName("MemberSpecialTitleChangeEvent")
+    data class MemberSpecialTitleChangeEvent(
+        val group: GroupModel,
+        val member: MemberModel,
+        val origin: String,
+        val new: String,
+        val operator: MemberModel? = null,
+        val bot: Long
+    ) : OutgoingAction()
 }
 
 
