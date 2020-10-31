@@ -316,4 +316,15 @@ Also see: [ServiceMessage](https://github.com/mamoe/mirai/blob/a774b8a7062fbd267
 操作返回:
 *自己试试不就有了*
 
+### VerboseMessageSource
+```json5
+{
+"type": "VerboseMessageSource",
+"content": {
+  "messageSource": "[MESSAGE SOURCE]" // Message Source
+}
+}
+```
+操作返回:
+*自己试试不就有了*
 

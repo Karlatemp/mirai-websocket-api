@@ -29,3 +29,5 @@ WS-API-SESSION: SESSION.SESSION
 ## `/verboseGroup`
 `GET /listFriends?bot={bot}&group={group}`
 
+## `/verboseMessageSource`
+`GET /verboseMessageSource?source={source}`

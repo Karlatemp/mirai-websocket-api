@@ -80,6 +80,11 @@ sealed class IncomingAction {
         val noMembers: Boolean = true
     ) : IncomingAction()
 
+    @SerialName("VerboseMessageSource")
+    @Serializable
+    data class VerboseMessageSource(
+        val messageSource: String
+    ) : IncomingAction()
 }
 
 @Serializable(with = ActionResult.ActionResultSerializer::class)
@@ -235,7 +240,7 @@ data class ActionResult(
 }
 
 @Serializable
-sealed class OutgoingAction() {
+sealed class OutgoingAction {
     open val replyKey: String? get() = null
     open val message: MessageChainModel? get() = null
     open val sender: SenderModel? get() = null

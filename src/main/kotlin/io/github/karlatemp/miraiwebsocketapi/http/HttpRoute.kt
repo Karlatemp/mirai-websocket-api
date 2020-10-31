@@ -16,6 +16,7 @@ import io.github.karlatemp.miraiwebsocketapi.get
 import io.github.karlatemp.miraiwebsocketapi.internal.listFriends
 import io.github.karlatemp.miraiwebsocketapi.internal.listGroups
 import io.github.karlatemp.miraiwebsocketapi.internal.verbose
+import io.github.karlatemp.miraiwebsocketapi.messageSourceCache
 import io.github.karlatemp.miraiwebsocketapi.set
 import io.ktor.application.*
 import io.ktor.http.*
@@ -134,14 +135,14 @@ fun Routing.setupHttp() {
         interrup {
             checkSession()
             // TODO: Check perms
-            call.respondText(error0(0, content = bot().listGroups()))
+            call.respondText(error0(0, content = bot().listGroups()), CONTENT_JSON)
         }
     }
     get("/listFriends") {
         interrup {
             checkSession()
             // TODO: Check perms
-            call.respondText(error0(0, content = bot().listFriends()))
+            call.respondText(error0(0, content = bot().listFriends()), CONTENT_JSON)
         }
     }
     get("/verboseGroup") {
@@ -149,7 +150,21 @@ fun Routing.setupHttp() {
             checkSession()
             // TODO: Check perms
             val noMembers = call.parameters["noMembers"]?.toBoolean() ?: false
-            call.respondText(error0(0, content = group().verbose(noMembers)))
+            call.respondText(error0(0, content = group().verbose(noMembers)), CONTENT_JSON)
+        }
+    }
+    get("/verboseMessageSource") {
+        interrup {
+            checkSession()
+            // TODO: Check perms
+            val messageSource = parameter("source")
+            val msg = messageSourceCache[messageSource] ?: interrupt(
+                error0(
+                    5,
+                    "Message source `${messageSource}` invalidated"
+                )
+            )
+            call.respondText(error0(0, content = msg.verbose()), CONTENT_JSON)
         }
     }
 }

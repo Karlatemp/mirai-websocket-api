@@ -47,7 +47,7 @@ internal operator fun <T, V> Cache<T, V>.get(key: T): V? = getIfPresent(key)
 internal operator fun <T, V> Cache<T, V>.set(key: T, value: V) = put(key, value)
 
 internal fun MessageSource.toModel(): MessageSourceModel {
-    val id = "MS.T" + System.currentTimeMillis() + ".UID" + UUID.randomUUID()
+    val id = "MS.T" + System.currentTimeMillis() + ".UID" + UUID.randomUUID().toString().replace("-", "")
     messageSourceCache[id] = this
     return MessageSourceModel(id)
 }
@@ -126,7 +126,7 @@ suspend fun MessageChainModel.toChain(source: Contact? = null): MessageChain = b
 
 
 @OptIn(ExperimentalStdlibApi::class)
-suspend fun MessageChain.toModel(): MessageChainModel = buildList {
+suspend fun MessageChain.toModel(skipMessageSource: Boolean = false): MessageChainModel = buildList {
     this@toModel.forEach { elm ->
         val model = when (elm) {
             is PlainText -> PlainModel(elm.content)
@@ -141,13 +141,13 @@ suspend fun MessageChain.toModel(): MessageChainModel = buildList {
             )
             is Image -> ImageModel(elm.imageId, elm.queryUrl())
             is LightApp -> LightAppModel(elm.content)
-            is MessageSource -> elm.toModel()
+            is MessageSource -> if (skipMessageSource) null else elm.toModel()
             is PokeMessage -> PokeModel(elm.name, elm.type)
             is QuoteReply -> QuoteModel(elm.source.toModel().id)
             is ServiceMessage -> ServiceModel(elm.serviceId, elm.content)
             is Voice -> VoiceModel(elm.url, elm.fileName)
-            else -> return@forEach
-        }
+            else -> null
+        } ?: return@forEach
         add(model)
     }
 }

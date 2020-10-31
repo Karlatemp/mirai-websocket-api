@@ -423,6 +423,14 @@ fun Application.web() {
                                         request.repOk(bot.listGroups())
                                     }
                                 }
+                                is IncomingAction.VerboseMessageSource -> {
+                                    val messageSource = messageSourceCache[action.messageSource]
+                                    if (messageSource == null) {
+                                        request.repErr("Message source ${action.messageSource} invalidated")
+                                    } else {
+                                        request.repOk(messageSource.verbose())
+                                    }
+                                }
                             }
                         } catch (e: Throwable) {
                             request.repErr(e)
