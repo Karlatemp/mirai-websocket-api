@@ -86,8 +86,8 @@ suspend fun main() {
                 }
                 launch {
                     if (msg is OutgoingAction) {
-                        if (msg.isMessageEvent) {
-                            val chain = msg.message!!
+                        run {
+                            val chain = msg.message ?: return@run
                             val rwmsg = chain.joinToString("") {
                                 if (it is PlainModel) it.text else ""
                             }
