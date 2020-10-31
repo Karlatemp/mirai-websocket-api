@@ -191,6 +191,87 @@ Also see: [ServiceMessage](https://github.com/mamoe/mirai/blob/a774b8a7062fbd267
 ```
 注: 要回复 TempMessage 只能通过 [ReplyMessage](#ReplyMessage)
 
+### MemberMuteEvent
+```json5
+{
+  "type": "MemberMuteEvent",
+  "group": {}, // [GroupModel]
+  "member": {}, // [MemberModel],
+  "bot": 1234567890, // [LONG]
+  "time": 10, // [INT] 禁言时间, 单位 s
+  "operator": {}, // [MemberModel], 可能不存在, 不存在时为bot操作
+}
+```
+
+### MemberUnmuteEvent
+```json5
+{
+  "type": "MemberUnmuteEvent",
+  "group": {}, // [GroupModel]
+  "member": {}, // [MemberModel]
+  "bot": 1234567890, // [LONG]
+  "operator": {}, // [MemberModel], 可能不存在, 不存在时为bot操作
+}
+```
+
+### BotMuteEvent
+```json5
+{
+  "type": "BotMuteEvent",
+  "group": {}, // [GroupModel]
+  "bot": 1234567890, // [LONG]
+  "time": 10, // [INT] 禁言时间, 单位 s
+  "operator": {}, // [MemberModel]
+}
+```
+
+### BotUnmuteEvent
+```json5
+{
+  "type": "BotUnmuteEvent",
+  "group": {}, // [GroupModel]
+  "bot": 1234567890, // [LONG]
+  "operator": {}, // [MemberModel]
+}
+```
+
+### BotGroupPermissionChangeEvent
+```json5
+{
+  "type": "BotGroupPermissionChangeEvent",
+  "group": {}, // [GroupModel]
+  "bot": 1234567890, // [LONG]
+  "origin": "member", // [String ENUM] bot 原先权限
+  "new": "administrator", // [String ENUM] bot 新权限
+}
+```
+
+### MemberGroupPermissionChangeEvent
+```json5
+{
+  "type": "MemberPermissionChangeEvent",
+  "group": {}, // [GroupModel]
+  "bot": 1234567890, // [LONG]
+  "member": {}, // [MemberModel]
+  "origin": "member", // [String ENUM] bot 原先权限
+  "new": "administrator", // [String ENUM] bot 新权限
+}
+```
+
+### MemberSpecialTitleChangeEvent
+群成员头像改变事件
+```json5
+{
+  "type": "MemberSpecialTitleChangeEvent",
+  "group": {}, // [GroupModel]
+  "member": {}, // [MemberModel]
+  "origin": "member", // [String ENUM] bot 原先权限
+  "new": "administrator", // [String ENUM] bot 新权限
+  "bot": 1234567890, // [LONG]
+  "operator": {}, // [MemberModel], 群主, 不存在时意为 bot 是群主, bot修改了头衔
+}
+```
+
 ## 操作列表
 
 ### ReplyMessage
