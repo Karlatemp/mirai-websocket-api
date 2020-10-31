@@ -39,6 +39,7 @@ import net.mamoe.mirai.contact.Contact
 import net.mamoe.mirai.event.Event
 import net.mamoe.mirai.event.Listener
 import net.mamoe.mirai.event.broadcast
+import net.mamoe.mirai.event.events.MemberMuteEvent
 import net.mamoe.mirai.event.events.MessageRecallEvent
 import net.mamoe.mirai.event.subscribeAlways
 import net.mamoe.mirai.getFriendOrNull
@@ -120,10 +121,18 @@ object MiraiWebsocketApi : KotlinPlugin(
                         message = message.toModel(),
                         replyKey = saveReplyCache(sender),
                         bot = bot.id
-                    )
+                    ).post()
+                }
+                is MemberMuteEvent -> {
+                    OutgoingAction.MemberMuteEvent(
+                        member = member.toModel(),
+                        group = group.toModel(),
+                        time = durationSeconds,
+                        operator = operator?.toModel(),
+                        bot = bot.id
+                    ).post()
                 }
                 is MessageRecallEvent -> {
-
                 }
             }
         }

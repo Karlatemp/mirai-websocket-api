@@ -235,9 +235,7 @@ data class ActionResult(
 }
 
 @Serializable
-sealed class OutgoingAction(
-    val isMessageEvent: Boolean = false
-) {
+sealed class OutgoingAction() {
     open val replyKey: String? get() = null
     open val message: MessageChainModel? get() = null
     open val sender: SenderModel? get() = null
@@ -250,9 +248,7 @@ sealed class OutgoingAction(
         override val message: MessageChainModel,
         override val replyKey: String,
         val bot: Long
-    ) : OutgoingAction(
-        isMessageEvent = true
-    )
+    ) : OutgoingAction()
 
     @Serializable
     @SerialName("FriendMessage")
@@ -261,9 +257,7 @@ sealed class OutgoingAction(
         override val message: MessageChainModel,
         override val replyKey: String,
         val bot: Long
-    ) : OutgoingAction(
-        isMessageEvent = true
-    )
+    ) : OutgoingAction()
 
     @Serializable
     @SerialName("TempMessage")
@@ -273,9 +267,17 @@ sealed class OutgoingAction(
         override val message: MessageChainModel,
         override val replyKey: String,
         val bot: Long
-    ) : OutgoingAction(
-        isMessageEvent = true
-    )
+    ) : OutgoingAction()
+
+    @Serializable
+    @SerialName("MemberMuteEvent")
+    data class MemberMuteEvent(
+        val group: GroupModel,
+        val member: MemberModel,
+        val bot: Long,
+        val time: Int,
+        val operator: MemberModel? = null
+    ) : OutgoingAction()
 }
 
 
