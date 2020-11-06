@@ -350,8 +350,9 @@ Also see: [ServiceMessage](https://github.com/mamoe/mirai/blob/a774b8a7062fbd267
 禁言群成员
 ```json5
 {
-"type": "MuteMember",
+  "type": "MuteMember",
   "content": {
+    "bot": 112233221100, // [LONG] bot id
     "group": 123456789, // [LONG] 群号
     "member": 987654321, // 群成员QQ号
     "time": 60 // 单位: 秒
